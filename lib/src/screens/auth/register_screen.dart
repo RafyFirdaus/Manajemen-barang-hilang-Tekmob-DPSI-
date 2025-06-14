@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../components/custom_button.dart';
+import '../../widgets/custom_button.dart';
+import '../../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -13,6 +14,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureText = true;
   bool _obscureConfirmText = true;
   bool _agreeToTerms = false;
+  bool _isLoading = false;
+  
+  // Error messages
+  String? _namaError;
+  String? _emailError;
+  String? _passwordError;
+  String? _confirmPasswordError;
+  String? _teleponError;
+  String? _registerError;
   
   // Controllers for form fields
   final _namaController = TextEditingController();
@@ -29,6 +39,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordFocus = FocusNode();
   final _teleponFocus = FocusNode();
   final _alamatFocus = FocusNode();
+  
+  // Auth service
+  final _authService = AuthService();
   
   @override
   void initState() {
@@ -76,7 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -107,7 +120,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: const Color(0xFF1F41BB),
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 40),
                 
                 // Form fields
                 // Nama Lengkap
@@ -115,6 +128,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _namaController,
                   focusNode: _namaFocus,
                   hintText: 'Nama Lengkap',
+                  errorText: _namaError,
                 ),
                 const SizedBox(height: 16),
                 
@@ -124,6 +138,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   focusNode: _emailFocus,
                   hintText: 'Email',
                   keyboardType: TextInputType.emailAddress,
+                  errorText: _emailError,
                 ),
                 const SizedBox(height: 16),
                 
@@ -133,6 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   focusNode: _passwordFocus,
                   hintText: 'Password',
                   obscureText: _obscureText,
+                  errorText: _passwordError,
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
@@ -153,6 +169,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   focusNode: _confirmPasswordFocus,
                   hintText: 'Confirm Password',
                   obscureText: _obscureConfirmText,
+                  errorText: _confirmPasswordError,
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureConfirmText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
@@ -165,7 +182,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 
                 // Nomor Telepon
                 _buildTextField(
@@ -173,8 +190,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   focusNode: _teleponFocus,
                   hintText: 'Nomor Telepon',
                   keyboardType: TextInputType.phone,
+                  errorText: _teleponError,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 
                 // Alamat Domisili
                 _buildTextField(
@@ -182,7 +200,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   focusNode: _alamatFocus,
                   hintText: 'Alamat Domisili',
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 
                 // Terms and Conditions
                 Row(
@@ -207,23 +225,177 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 30),
+                
+                // Error message
+                if (_registerError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: Text(
+                      _registerError!,
+                      style: GoogleFonts.poppins(
+                        color: Colors.red,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 
                 // Register button
                 CustomButton(
-                  text: 'Daftar',
-                  isActive: true,
+                  text: _isLoading ? 'Mendaftar...' : 'Daftar',
+                  isActive: _agreeToTerms && !_isLoading,
                   onPressed: () {
-                    // Implement registration logic
+                    if (_agreeToTerms && !_isLoading) {
+                      _handleRegister();
+                    }
                   },
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 40),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+  
+  // Handle registration
+  Future<void> _handleRegister() async {
+    // Reset errors
+    setState(() {
+      _namaError = null;
+      _emailError = null;
+      _passwordError = null;
+      _confirmPasswordError = null;
+      _teleponError = null;
+      _registerError = null;
+      _isLoading = true;
+    });
+    
+    // Validate inputs
+    bool isValid = true;
+    
+    // Nama validation
+    final nama = _namaController.text.trim();
+    if (nama.isEmpty) {
+      setState(() {
+        _namaError = 'Nama tidak boleh kosong';
+      });
+      isValid = false;
+    }
+    
+    // Email validation
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() {
+        _emailError = 'Email tidak boleh kosong';
+      });
+      isValid = false;
+    } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      setState(() {
+        _emailError = 'Format email tidak valid';
+      });
+      isValid = false;
+    }
+    
+    // Password validation
+    final password = _passwordController.text;
+    if (password.isEmpty) {
+      setState(() {
+        _passwordError = 'Password tidak boleh kosong';
+      });
+      isValid = false;
+    } else if (password.length < 6) {
+      setState(() {
+        _passwordError = 'Password minimal 6 karakter';
+      });
+      isValid = false;
+    }
+    
+    // Confirm password validation
+    final confirmPassword = _confirmPasswordController.text;
+    if (confirmPassword.isEmpty) {
+      setState(() {
+        _confirmPasswordError = 'Konfirmasi password tidak boleh kosong';
+      });
+      isValid = false;
+    } else if (confirmPassword != password) {
+      setState(() {
+        _confirmPasswordError = 'Password tidak cocok';
+      });
+      isValid = false;
+    }
+    
+    // Phone validation
+    final phone = _teleponController.text.trim();
+    if (phone.isEmpty) {
+      setState(() {
+        _teleponError = 'Nomor telepon tidak boleh kosong';
+      });
+      isValid = false;
+    } else if (!RegExp(r'^[0-9]{10,13}$').hasMatch(phone)) {
+      setState(() {
+        _teleponError = 'Format nomor telepon tidak valid';
+      });
+      isValid = false;
+    }
+    
+    // Terms validation
+    if (!_agreeToTerms) {
+      setState(() {
+        _registerError = 'Anda harus menyetujui syarat dan ketentuan';
+      });
+      isValid = false;
+    }
+    
+    if (!isValid) {
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+    
+    // Call auth service
+    try {
+      final result = await _authService.register(
+        name: nama,
+        email: email,
+        password: password,
+        phone: phone,
+        address: _alamatController.text.trim(),
+      );
+      
+      if (result['success']) {
+        // Registration successful - navigate to login or home
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'])),
+          );
+          // Navigate back to login
+          Navigator.pop(context);
+        }
+      } else {
+        // Registration failed
+        if (mounted) {
+          setState(() {
+            _registerError = result['message'];
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _registerError = 'Terjadi kesalahan: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
   
   Widget _buildTextField({
@@ -233,32 +405,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
     Widget? suffixIcon,
+    String? errorText,
   }) {
     final bool isFocused = focusNode.hasFocus;
+    final bool hasError = errorText != null;
     
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isFocused ? const Color(0xFF1F41BB) : Colors.grey.shade300,
-          width: isFocused ? 2.0 : 1.0,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: hasError 
+                ? Colors.red 
+                : (isFocused ? const Color(0xFF1F41BB) : Colors.grey.shade300),
+              width: isFocused || hasError ? 2.0 : 1.0,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: GoogleFonts.poppins(color: Colors.grey),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              border: InputBorder.none,
+              suffixIcon: suffixIcon,
+            ),
+            style: GoogleFonts.poppins(),
+          ),
         ),
-      ),
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: GoogleFonts.poppins(color: Colors.grey),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          border: InputBorder.none,
-          suffixIcon: suffixIcon,
-        ),
-        style: GoogleFonts.poppins(),
-      ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 6.0, left: 12.0),
+            child: Text(
+              errorText,
+              style: GoogleFonts.poppins(
+                color: Colors.red,
+                fontSize: 12,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

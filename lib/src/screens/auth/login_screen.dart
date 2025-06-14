@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'register_screen.dart';
+import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -11,6 +12,10 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _obscureText = true;
+  bool _isLoading = false;
+  String? _emailError;
+  String? _passwordError;
+  String? _loginError;
   
   // Controllers for form fields
   final _emailController = TextEditingController();
@@ -19,6 +24,9 @@ class _LoginScreenState extends State<LoginScreen> {
   // Focus nodes to track field focus state
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
+  
+  // Auth service
+  final _authService = AuthService();
   
   @override
   void initState() {
@@ -53,12 +61,12 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: SingleChildScrollView(
             child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 40),
+              const SizedBox(height: 50),
               // Title
               Text(
                 'Masuk di sini',
@@ -69,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: const Color(0xFF1F41BB),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
               // Welcome message
               Text(
                 'Selamat Datang,\nSenang melihatmu kembali!',
@@ -79,13 +87,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: Colors.black87,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 60),
               // Email field
               _buildTextField(
                 controller: _emailController,
                 focusNode: _emailFocus,
                 hintText: 'Email',
                 keyboardType: TextInputType.emailAddress,
+                errorText: _emailError,
               ),
               const SizedBox(height: 16),
               // Password field
@@ -94,6 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 focusNode: _passwordFocus,
                 hintText: 'Kata Sandi',
                 obscureText: _obscureText,
+                errorText: _passwordError,
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
@@ -120,10 +130,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 30),
+              // Error message
+              if (_loginError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Text(
+                    _loginError!,
+                    style: GoogleFonts.poppins(
+                      color: Colors.red,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              
               // Login button
               ElevatedButton(
-                onPressed: () {},
+                onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1F41BB),
                   foregroundColor: Colors.white,
@@ -133,14 +157,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   elevation: 5,
                   shadowColor: const Color(0xFFCBD7FF),
+                  disabledBackgroundColor: Colors.grey.shade400,
                 ),
-                child: Text(
-                  'Masuk',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'Masuk',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
               const SizedBox(height: 16),
               // Create account
@@ -192,6 +226,89 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
   
+  // Handle login
+  Future<void> _handleLogin() async {
+    // Reset errors
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+      _loginError = null;
+      _isLoading = true;
+    });
+    
+    // Validate inputs
+    bool isValid = true;
+    
+    // Email validation
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() {
+        _emailError = 'Email tidak boleh kosong';
+      });
+      isValid = false;
+    } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      setState(() {
+        _emailError = 'Format email tidak valid';
+      });
+      isValid = false;
+    }
+    
+    // Password validation
+    final password = _passwordController.text;
+    if (password.isEmpty) {
+      setState(() {
+        _passwordError = 'Password tidak boleh kosong';
+      });
+      isValid = false;
+    } else if (password.length < 6) {
+      setState(() {
+        _passwordError = 'Password minimal 6 karakter';
+      });
+      isValid = false;
+    }
+    
+    if (!isValid) {
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+    
+    // Call auth service
+    try {
+      final result = await _authService.login(email, password);
+      
+      if (result['success']) {
+        // Login successful - navigate to home or dashboard
+        if (mounted) {
+          // TODO: Navigate to home/dashboard
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'])),
+          );
+        }
+      } else {
+        // Login failed
+        if (mounted) {
+          setState(() {
+            _loginError = result['message'];
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loginError = 'Terjadi kesalahan: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+  
   Widget _buildTextField({
     required TextEditingController controller,
     required FocusNode focusNode,
@@ -199,32 +316,52 @@ class _LoginScreenState extends State<LoginScreen> {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
     Widget? suffixIcon,
+    String? errorText,
   }) {
     final bool isFocused = focusNode.hasFocus;
+    final bool hasError = errorText != null;
     
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isFocused ? const Color(0xFF1F41BB) : Colors.grey.shade300,
-          width: isFocused ? 2.0 : 1.0,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: hasError 
+                ? Colors.red 
+                : (isFocused ? const Color(0xFF1F41BB) : Colors.grey.shade300),
+              width: isFocused || hasError ? 2.0 : 1.0,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: GoogleFonts.poppins(color: Colors.grey),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              border: InputBorder.none,
+              suffixIcon: suffixIcon,
+            ),
+            style: GoogleFonts.poppins(),
+          ),
         ),
-      ),
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: GoogleFonts.poppins(color: Colors.grey),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          border: InputBorder.none,
-          suffixIcon: suffixIcon,
-        ),
-        style: GoogleFonts.poppins(),
-      ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 6.0, left: 12.0),
+            child: Text(
+              errorText,
+              style: GoogleFonts.poppins(
+                color: Colors.red,
+                fontSize: 12,
+              ),
+            ),
+          ),
+      ],
     );
   }
   }
