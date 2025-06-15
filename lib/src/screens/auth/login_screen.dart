@@ -66,18 +66,18 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 50),
+              const SizedBox(height: 100),
               // Title
               Text(
                 'Masuk di sini',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
-                  fontSize: 28,
+                  fontSize: 35,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF1F41BB),
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 35),
               // Welcome message
               Text(
                 'Selamat Datang,\nSenang melihatmu kembali!',
@@ -106,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 errorText: _passwordError,
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    _obscureText ? Icons.visibility_sharp : Icons.visibility_off_sharp,
                     color: Colors.grey,
                   ),
                   onPressed: () {
@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  elevation: 5,
+                  elevation: 7,
                   shadowColor: const Color(0xFFCBD7FF),
                   disabledBackgroundColor: Colors.grey.shade400,
                 ),

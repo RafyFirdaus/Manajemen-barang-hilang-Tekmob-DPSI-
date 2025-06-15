@@ -3,6 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/custom_button.dart';
 import '../auth/login_screen.dart';
+// ignore: unused_import
+import '../auth/register_screen.dart';
 import 'dart:async';
 
 class WelcomeScreen extends StatefulWidget {
@@ -13,7 +15,8 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
-  bool _isLoading = true;
+  // ignore: unused_field
+  final bool _isLoading = true;
   
   @override
   void initState() {
