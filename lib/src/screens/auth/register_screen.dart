@@ -276,11 +276,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // Validate inputs
     bool isValid = true;
     
-    // Nama validation
+    // Name validation
     final nama = _namaController.text.trim();
     if (nama.isEmpty) {
       setState(() {
         _namaError = 'Nama tidak boleh kosong';
+      });
+      isValid = false;
+    } else if (nama.length < 2) {
+      setState(() {
+        _namaError = 'Nama minimal 2 karakter';
       });
       isValid = false;
     }
@@ -453,4 +458,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ],
     );
   }
+  
+
 }
