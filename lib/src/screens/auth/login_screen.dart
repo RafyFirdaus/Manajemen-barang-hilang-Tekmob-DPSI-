@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'register_screen.dart';
 import '../../services/auth_service.dart';
+import '../dashboard/user_dashboard_screen.dart';
+import '../dashboard/satpam_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -279,12 +281,28 @@ class _LoginScreenState extends State<LoginScreen> {
       final result = await _authService.login(email, password);
       
       if (result['success']) {
-        // Login successful - navigate to home or dashboard
+        // Login successful - navigate to appropriate dashboard based on role
         if (mounted) {
-          // TODO: Navigate to home/dashboard
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(result['message'])),
           );
+          
+          // Get user data to determine role
+          final userData = await _authService.getUserData();
+          final userRole = userData['role'] ?? '';
+          
+          // Navigate to appropriate dashboard
+          if (userRole == 'satpam') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const SatpamDashboardScreen()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const UserDashboardScreen()),
+            );
+          }
         }
       } else {
         // Login failed
