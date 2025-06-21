@@ -1,18 +1,53 @@
 # Manajemen Barang Hilang
 
-Aplikasi Flutter untuk manajemen barang hilang yang membantu pengguna menemukan dan mengembalikan barang yang hilang.
+Aplikasi Flutter untuk manajemen barang hilang yang membantu pengguna menemukan dan mengembalikan barang yang hilang. Aplikasi ini sudah terintegrasi dengan **API Express** untuk backend yang lengkap.
 
-## Fitur
+## Fitur Utama
 
-### Autentikasi
-- **Layar Welcome**: Berfungsi sebagai layar loading dengan animasi circular progress indicator dan navigasi otomatis ke layar login setelah 3 detik.
-- **Login**: Form login dengan validasi email dan password, serta penanganan error.
-- **Register**: Form pendaftaran dengan validasi lengkap untuk semua field (nama, email, password, konfirmasi password, nomor telepon).
+### 🔐 Sistem Autentikasi
+- **Layar Welcome**: Layar loading dengan animasi dan navigasi otomatis
+- **Login**: Autentikasi pengguna dengan validasi email dan password
+- **Register**: Pendaftaran pengguna baru dengan validasi lengkap
+- **Secure Storage**: Penyimpanan token autentikasi yang aman
+- **Role-based Access**: Sistem peran pengguna (User/Satpam)
 
-### Layanan
-- **AuthService**: Implementasi dummy service untuk simulasi autentikasi dengan `Future.delayed()` untuk mensimulasikan panggilan API.
-  - Login: Validasi email dan password dengan simulasi respons sukses/gagal.
-  - Register: Validasi data pendaftaran dengan simulasi respons sukses/gagal.
+### 📋 Manajemen Laporan
+- **Tambah Laporan**: Form lengkap untuk membuat laporan kehilangan atau temuan
+- **Upload Foto**: Fitur upload multiple foto untuk setiap laporan
+- **Kategori Laporan**: 
+  - Laporan Kehilangan
+  - Laporan Temuan
+- **Detail Laporan**: Informasi lengkap termasuk nama barang, lokasi, tanggal, dan deskripsi
+
+### 👥 Dashboard Multi-Role
+- **User Dashboard**: 
+  - Melihat semua laporan
+  - Filter berdasarkan jenis laporan
+  - Pencarian laporan
+  - Membuat laporan baru
+- **Satpam Dashboard**:
+  - Mengelola semua laporan
+  - Approve/Reject laporan
+  - Update status laporan
+  - Monitoring laporan real-time
+
+### 🔍 Fitur Pencarian & Filter
+- Pencarian berdasarkan nama barang
+- Filter berdasarkan jenis laporan
+- Tab navigation untuk kategori laporan
+- Real-time search functionality
+
+### 🌐 Integrasi API Express
+- **Base URL**: `https://api-manajemen-barang-hilang.vercel.app/api`
+- **Endpoints Terintegrasi**:
+  - `POST /login` - Autentikasi pengguna
+  - `POST /register` - Registrasi pengguna baru
+  - `GET /reports` - Mengambil semua laporan
+  - `POST /reports` - Membuat laporan baru
+  - `PUT /reports/:id/status` - Update status laporan
+  - `DELETE /reports/:id` - Hapus laporan
+- **Fallback System**: Local storage sebagai backup jika API tidak tersedia
+- **Token Authentication**: Bearer token untuk keamanan API
 
 ## Struktur Folder
 
@@ -21,24 +56,90 @@ lib/
 ├── main.dart
 └── src/
     ├── assets/
-    │   └── images/       # Gambar SVG dan aset lainnya
+    │   └── images/           # Gambar SVG dan aset lainnya
+    ├── components/           # Komponen UI yang dapat digunakan kembali
+    ├── models/
+    │   └── report_model.dart # Model data laporan
     ├── screens/
-    │   ├── auth/         # Layar login dan register
-    │   └── welcome/      # Layar welcome/loading
-    ├── services/         # Layanan API dummy
-    └── widgets/          # Widget yang dapat digunakan kembali
+    │   ├── auth/             # Layar login dan register
+    │   ├── dashboard/        # Dashboard user dan satpam
+    │   ├── welcome/          # Layar welcome/loading
+    │   └── add_report_screen.dart # Layar tambah laporan
+    ├── services/
+    │   ├── auth_service.dart # Service autentikasi dengan API
+    │   └── report_service.dart # Service manajemen laporan dengan API
+    └── widgets/              # Widget yang dapat digunakan kembali
 ```
 
-## Catatan Pengembangan
+## Teknologi yang Digunakan
 
-Aplikasi ini menggunakan dummy API calls karena belum ada backend API yang tersedia. Semua panggilan API disimulasikan menggunakan `Future.delayed()` untuk memberikan pengalaman yang realistis.
+- **Flutter**: Framework utama untuk mobile development
+- **HTTP Package**: Untuk komunikasi dengan API Express
+- **Flutter Secure Storage**: Penyimpanan token yang aman
+- **Shared Preferences**: Local storage untuk backup data
+- **Image Picker**: Upload dan pilih gambar
+- **Google Fonts**: Typography yang konsisten
+- **Flutter SVG**: Dukungan gambar SVG
+- **Intl**: Formatting tanggal dan waktu
 
-Untuk login testing, gunakan:
-- Email: test@example.com
-- Password: password123
+## Instalasi dan Menjalankan Aplikasi
 
-## Memulai
+### Prasyarat
+- Flutter SDK (versi terbaru)
+- Dart SDK
+- Android Studio / VS Code
+- Emulator Android atau perangkat fisik
 
-1. Clone repository ini
-2. Jalankan `flutter pub get` untuk menginstall dependencies
-3. Jalankan `flutter run` untuk memulai aplikasi
+### Langkah Instalasi
+
+1. **Clone repository**
+   ```bash
+   git clone https://github.com/username/Manajemen-barang-hilang-Tekmob-DPSI-.git
+   cd Manajemen-barang-hilang-Tekmob-DPSI-
+   ```
+
+2. **Install dependencies**
+   ```bash
+   flutter pub get
+   ```
+
+3. **Jalankan aplikasi**
+   ```bash
+   flutter run
+   ```
+
+## Konfigurasi API
+
+Aplikasi sudah dikonfigurasi untuk menggunakan API Express yang di-deploy di Vercel:
+- **Production API**: `https://api-manajemen-barang-hilang.vercel.app/api`
+- **Local Development**: Ubah `baseUrl` di `auth_service.dart` dan `report_service.dart`
+
+## Fitur Keamanan
+
+- **Token-based Authentication**: Menggunakan JWT token
+- **Secure Storage**: Token disimpan dengan aman menggunakan Flutter Secure Storage
+- **Input Validation**: Validasi lengkap pada semua form input
+- **Error Handling**: Penanganan error yang komprehensif
+- **Offline Support**: Fallback ke local storage jika API tidak tersedia
+
+## Kontribusi
+
+1. Fork repository ini
+2. Buat branch fitur baru (`git checkout -b feature/AmazingFeature`)
+3. Commit perubahan (`git commit -m 'Add some AmazingFeature'`)
+4. Push ke branch (`git push origin feature/AmazingFeature`)
+5. Buat Pull Request
+
+## Lisensi
+
+Project ini menggunakan lisensi MIT. Lihat file `LICENSE` untuk detail lebih lanjut.
+
+## Tim Pengembang
+
+- **Mobile Development**: Flutter Team
+- **Backend API**: Express.js Team
+- **UI/UX Design**: Design Team
+
+---
+
+**Catatan**: Aplikasi ini dikembangkan sebagai bagian dari project Teknologi Mobile - DPSI
