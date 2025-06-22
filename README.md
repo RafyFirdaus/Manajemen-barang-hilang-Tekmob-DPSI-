@@ -17,7 +17,7 @@ Aplikasi Flutter untuk manajemen barang hilang yang membantu pengguna menemukan 
 - **Kategori Laporan**: 
   - Laporan Kehilangan
   - Laporan Temuan
-- **Detail Laporan**: Informasi lengkap termasuk nama barang, lokasi, tanggal, dan deskripsi
+- **Detail Laporan**: Informasi lengkap termasuk nama barang, lokasi, tanggal, deskripsi, dan gambar
 
 ### 👥 Dashboard Multi-Role
 - **User Dashboard**: 
@@ -31,11 +31,20 @@ Aplikasi Flutter untuk manajemen barang hilang yang membantu pengguna menemukan 
   - Update status laporan
   - Monitoring laporan real-time
 
-### 🔍 Fitur Pencarian & Filter
-- Pencarian berdasarkan nama barang
-- Filter berdasarkan jenis laporan
-- Tab navigation untuk kategori laporan
-- Real-time search functionality
+### 🎨 Komponen UI Modern
+- **Dashboard Header**: Header dashboard dengan greeting dan navigasi tab
+- **Dashboard Search Bar**: Search bar dengan ikon filter terintegrasi
+- **Dashboard Tab Bar**: Tab bar dengan desain modern dan animasi smooth
+- **Report Card**: Kartu laporan dengan status indicator dan layout responsif
+- **Report List View**: List view yang dapat di-scroll dengan empty state
+- **Report Detail Modal**: Modal detail laporan dengan informasi lengkap
+
+### 🖼️ Fullscreen Image Viewer
+- **Zoom & Pan**: Fitur zoom in/out dan pan untuk melihat detail gambar
+- **Multi-Image Navigation**: Navigasi antar gambar dengan swipe gesture
+- **Interactive Viewer**: Viewer interaktif dengan boundary margin
+- **Fullscreen Experience**: Tampilan fullscreen dengan background hitam
+- **Easy Integration**: Dapat dipanggil dari mana saja dengan static method
 
 ### 🌐 Integrasi API Express
 - **Base URL**: `https://api-manajemen-barang-hilang.vercel.app/api`
@@ -69,6 +78,13 @@ lib/
     │   ├── auth_service.dart # Service autentikasi dengan API
     │   └── report_service.dart # Service manajemen laporan dengan API
     └── widgets/              # Widget yang dapat digunakan kembali
+        ├── dashboard_header.dart      # Header dashboard dengan greeting
+        ├── dashboard_search_bar.dart  # Search bar dengan filter
+        ├── dashboard_tab_bar.dart     # Tab bar dengan desain modern
+        ├── fullscreen_image_viewer.dart # Viewer gambar fullscreen
+        ├── report_card.dart           # Kartu laporan dengan status
+        ├── report_detail_modal.dart   # Modal detail laporan
+        └── report_list_view.dart      # List view laporan
 ```
 
 ## Teknologi yang Digunakan
@@ -142,4 +158,4 @@ Project ini menggunakan lisensi MIT. Lihat file `LICENSE` untuk detail lebih lan
 
 ---
 
-**Catatan**: Aplikasi ini dikembangkan sebagai bagian dari project Teknologi Mobile - DPSI
+**Catatan**: Aplikasi ini dikembangkan sebagai bagian dari project DPSI
