@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
-import 'dart:typed_data';
 import '../models/report_model.dart';
 import 'fullscreen_image_viewer.dart';
 
