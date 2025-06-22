@@ -108,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 errorText: _passwordError,
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscureText ? Icons.visibility_sharp : Icons.visibility_off_sharp,
+                    _obscureText ? Icons.visibility_off_sharp : Icons.visibility_sharp,
                     color: Colors.grey,
                   ),
                   onPressed: () {
@@ -179,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
               ),
               const SizedBox(height: 16),
-              // Create account
+              // Create accountz
               Center(
                 child: TextButton(
                   onPressed: () {
@@ -198,27 +198,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 40),
-              // Or login with
-              Text(
-                'Atau masuk dengan:',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Social login buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _socialLoginButton('Google', Icons.g_mobiledata),
-                  const SizedBox(width: 16),
-                  _socialLoginButton('Facebook', Icons.facebook),
-                  const SizedBox(width: 16),
-                  _socialLoginButton('Apple', Icons.apple),
-                ],
               ),
             ],
           ),
@@ -384,17 +363,3 @@ class _LoginScreenState extends State<LoginScreen> {
   }
   }
 
-  Widget _socialLoginButton(String platform, IconData icon) {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: IconButton(
-        icon: Icon(icon),
-        onPressed: () {},
-      ),
-    );
-  }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/report_model.dart';
 import '../services/report_service.dart';
@@ -179,8 +181,18 @@ class _AddReportScreenState extends State<AddReportScreen> {
       final userData = await _authService.getUserData();
       final userId = userData['email'] ?? 'unknown';
       
-      // Convert XFile paths to string list (for now, just store file names)
-      final fotoPaths = _selectedImages.map((file) => file.name).toList();
+      // Convert XFile paths to base64 strings for storage
+      final fotoPaths = <String>[];
+      for (final file in _selectedImages) {
+        try {
+          final bytes = await file.readAsBytes();
+          final base64String = base64Encode(bytes);
+          fotoPaths.add('data:image/jpeg;base64,$base64String');
+        } catch (e) {
+          print('Error converting image to base64: $e');
+          // Skip this image if conversion fails
+        }
+      }
       
       // Create report object
       final report = Report(
@@ -571,11 +583,22 @@ class _AddReportScreenState extends State<AddReportScreen> {
                                         }
                                       },
                                     )
-                                  : Image.network(
-                                      _selectedImages[index].path,
+                                  : Image.file(
+                                      File(_selectedImages[index].path),
                                       width: 100,
                                       height: 100,
                                       fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          width: 100,
+                                          height: 100,
+                                          color: Colors.grey.shade200,
+                                          child: const Icon(
+                                            Icons.error,
+                                            color: Colors.red,
+                                          ),
+                                        );
+                                      },
                                     ),
                             ),
                             Positioned(
