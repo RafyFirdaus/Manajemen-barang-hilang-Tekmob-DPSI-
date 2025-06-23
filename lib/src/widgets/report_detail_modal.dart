@@ -46,14 +46,13 @@ class ReportDetailModal extends StatelessWidget {
     
     Color statusColor;
     switch (report.status.toLowerCase()) {
-      case 'menunggu verifikasi':
+      case 'proses':
         statusColor = Colors.orange;
         break;
-      case 'diverifikasi':
-      case 'disetujui':
+      case 'cocok':
         statusColor = Colors.green;
         break;
-      case 'ditolak':
+      case 'selesai':
         statusColor = Colors.red;
         break;
       default:
@@ -115,48 +114,86 @@ class ReportDetailModal extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Status dan jenis laporan
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: report.jenisLaporan == 'Laporan Kehilangan' 
-                              ? Colors.red.withOpacity(0.1)
-                              : Colors.blue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          report.jenisLaporan,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: report.jenisLaporan == 'Laporan Kehilangan' 
-                                ? Colors.red.shade700
-                                : Colors.blue.shade700,
-                          ),
-                        ),
+                  // Foto barang jika ada (dipindah ke atas)
+                  if (report.fotoPaths.isNotEmpty) ...[
+                    Text(
+                      'Foto Barang (${report.fotoPaths.length}):',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
                       ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'Status: ${report.status}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: statusColor,
-                          ),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 200,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: report.fotoPaths.length,
+                        itemBuilder: (context, index) {
+                          return GestureDetector(
+                            onTap: () {
+                              if (report.fotoPaths[index].isNotEmpty) {
+                                FullscreenImageViewer.show(
+                                  context: context,
+                                  imagePath: report.fotoPaths[index],
+                                  currentIndex: index,
+                                  allImages: report.fotoPaths,
+                                );
+                              }
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 12),
+                              width: 200,
+                              height: 200,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                  width: 1,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: report.fotoPaths[index].isNotEmpty
+                                    ? Stack(
+                                        children: [
+                                          _buildImageWidget(report.fotoPaths[index]),
+                                          // Overlay untuk menunjukkan bahwa foto dapat diklik
+                                          Positioned(
+                                            top: 8,
+                                            right: 8,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black.withOpacity(0.6),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: const Icon(
+                                                Icons.zoom_in,
+                                                color: Colors.white,
+                                                size: 16,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Container(
+                                        color: Colors.grey.shade100,
+                                        child: const Icon(
+                                          Icons.image_outlined,
+                                          size: 40,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                   
                   // Nama barang
                   Text(
@@ -221,86 +258,48 @@ class ReportDetailModal extends StatelessWidget {
                   
                   const SizedBox(height: 20),
                   
-                  // Foto barang jika ada
-                  if (report.fotoPaths.isNotEmpty) ...[
-                    Text(
-                      'Foto Barang (${report.fotoPaths.length}):',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                  // Status dan jenis laporan
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: report.jenisLaporan == 'Laporan Kehilangan' 
+                              ? Colors.red.withOpacity(0.1)
+                              : Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          report.jenisLaporan,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: report.jenisLaporan == 'Laporan Kehilangan' 
+                                ? Colors.red.shade700
+                                : Colors.blue.shade700,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 120,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: report.fotoPaths.length,
-                        itemBuilder: (context, index) {
-                          return GestureDetector(
-                            onTap: () {
-                              if (report.fotoPaths[index].isNotEmpty) {
-                                FullscreenImageViewer.show(
-                                  context: context,
-                                  imagePath: report.fotoPaths[index],
-                                  currentIndex: index,
-                                  allImages: report.fotoPaths,
-                                );
-                              }
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.only(right: 12),
-                              width: 120,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.grey.shade300,
-                                  width: 1,
-                                ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: report.fotoPaths[index].isNotEmpty
-                                    ? Stack(
-                                        children: [
-                                          _buildImageWidget(report.fotoPaths[index]),
-                                          // Overlay untuk menunjukkan bahwa foto dapat diklik
-                                          Positioned(
-                                            top: 8,
-                                            right: 8,
-                                            child: Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.black.withOpacity(0.6),
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              child: const Icon(
-                                                Icons.zoom_in,
-                                                color: Colors.white,
-                                                size: 16,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : Container(
-                                        color: Colors.grey.shade100,
-                                        child: const Icon(
-                                          Icons.image_outlined,
-                                          size: 40,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          );
-                        },
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Status: ${report.status}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: statusColor,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 20),
                   
                   // Tanggal dibuat
                   Container(
@@ -322,56 +321,65 @@ class ReportDetailModal extends StatelessWidget {
                   
                   const SizedBox(height: 20),
                   
-                  // Action buttons untuk verifikasi (hanya untuk satpam)
+                  // Tombol Klaim Barang untuk laporan temuan (hanya untuk user)
+                  if (report.jenisLaporan == 'Laporan Temuan' && !showVerificationActions) ...[                    
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // TODO: Implementasi fungsi klaim barang
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Fitur klaim barang akan segera tersedia'),
+                              backgroundColor: Colors.blue,
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1F41BB),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Klaim Barang',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                  
+                  // Action button untuk menandai ditemukan (hanya untuk satpam)
                   if (showVerificationActions) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              onApprove?.call();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              'Setujui Laporan',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          onApprove?.call(); // Menggunakan onApprove untuk menghapus laporan
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              onReject?.call();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              'Tolak Laporan',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                        child: Text(
+                          'Tandai Ditemukan',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ],
+                      ),
                     ),
                     const SizedBox(height: 20),
                   ],

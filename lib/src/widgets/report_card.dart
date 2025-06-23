@@ -19,13 +19,13 @@ class ReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Color statusColor;
     switch (report.status.toLowerCase()) {
-      case 'menunggu verifikasi':
+      case 'proses':
         statusColor = Colors.orange;
         break;
-      case 'diverifikasi':
+      case 'cocok':
         statusColor = Colors.green;
         break;
-      case 'ditolak':
+      case 'selesai':
         statusColor = Colors.red;
         break;
       default:

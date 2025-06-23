@@ -1,11 +1,6 @@
-# Manajemen Barang Hilang
+# Manajemen Barang Hilanglutter untuk manajemen barang hilang yang membantu pengguna menemukan dan mengembalikan barang yang hilang. Aplikasi ini sudah terintegrasi dengan **API Express** untuk backend yang lengkap.
 
-Aplikasi Flutter untuk manajemen barang hilang yang membantu pengguna menemukan dan mengembalikan barang yang hilang. Aplikasi ini sudah terintegrasi dengan **API Express** untuk backend yang lengkap.
-
-## Fitur Utama
-
-### 🔐 Sistem Autentikasi
-- **Layar Welcome**: Layar loading dengan animasi dan navigasi otomatis
+## Fitur an animasi dan navigasi otomatis
 - **Login**: Autentikasi pengguna dengan validasi email dan password
 - **Register**: Pendaftaran pengguna baru dengan validasi lengkap
 - **Secure Storage**: Penyimpanan token autentikasi yang aman
@@ -27,9 +22,6 @@ Aplikasi Flutter untuk manajemen barang hilang yang membantu pengguna menemukan 
   - Membuat laporan baru
 - **Satpam Dashboard**:
   - Mengelola semua laporan
-  - Approve/Reject laporan
-  - Update status laporan
-  - Monitoring laporan real-time
 
 ### 🎨 Komponen UI Modern
 - **Dashboard Header**: Header dashboard dengan greeting dan navigasi tab

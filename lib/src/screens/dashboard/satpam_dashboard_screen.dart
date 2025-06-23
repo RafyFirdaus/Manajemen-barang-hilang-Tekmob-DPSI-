@@ -361,40 +361,20 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
 
 
 
-  Future<void> _approveReport(Report report) async {
+  Future<void> _markAsFound(Report report) async {
     try {
-      await _reportService.updateReportStatus(report.id, 'Disetujui');
+      await _reportService.deleteReport(report.id);
       _loadReports(); // Refresh the list
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Laporan berhasil disetujui'),
+          content: Text('Laporan berhasil ditandai sebagai ditemukan dan dihapus'),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Gagal menyetujui laporan'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _rejectReport(Report report) async {
-    try {
-      await _reportService.updateReportStatus(report.id, 'Ditolak');
-      _loadReports(); // Refresh the list
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Laporan berhasil ditolak'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal menolak laporan'),
+          content: Text('Gagal menandai laporan sebagai ditemukan'),
           backgroundColor: Colors.red,
         ),
       );
@@ -408,9 +388,8 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       backgroundColor: Colors.transparent,
       builder: (context) => ReportDetailModal(
         report: report,
-        showVerificationActions: report.status == 'Menunggu Verifikasi',
-        onApprove: () => _approveReport(report),
-        onReject: () => _rejectReport(report),
+        showVerificationActions: report.status == 'Proses' || report.status == 'Menunggu Verifikasi' || report.status == 'Selesai',
+        onApprove: () => _markAsFound(report),
       ),
     );
   }

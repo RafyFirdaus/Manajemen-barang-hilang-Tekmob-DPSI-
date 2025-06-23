@@ -204,13 +204,13 @@ class ReportService {
       } else {
         // Fallback: ambil laporan dengan status "Menunggu Verifikasi" dari local
         final allReports = await _getAllReportsLocally();
-        return allReports.where((report) => report.status == 'Menunggu Verifikasi').toList();
+        return allReports.where((report) => report.status == 'Proses').toList();
       }
     } catch (e) {
       print('Error getting reports for verification: $e');
       // Fallback ke local storage
       final allReports = await _getAllReportsLocally();
-      return allReports.where((report) => report.status == 'Menunggu Verifikasi').toList();
+      return allReports.where((report) => report.status == 'Proses').toList();
     }
   }
 }

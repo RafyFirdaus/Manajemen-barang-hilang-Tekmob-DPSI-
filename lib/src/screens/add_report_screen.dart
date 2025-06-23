@@ -204,7 +204,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
         deskripsi: _deskripsiController.text,
         fotoPaths: fotoPaths,
         tanggalDibuat: DateTime.now(),
-        status: 'Menunggu Verifikasi',
+        status: 'Proses',
         userId: userId,
       );
       
