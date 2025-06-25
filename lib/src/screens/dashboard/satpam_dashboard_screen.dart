@@ -30,6 +30,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
   List<Report> _allReports = [];
   List<Report> _laporanHilang = [];
   List<Report> _laporanTemuan = [];
+  List<Report> _laporanSelesai = [];
 
   @override
   void initState() {
@@ -74,8 +75,11 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       final reports = await _reportService.getAllReports();
       setState(() {
         _allReports = reports;
-        _laporanHilang = reports.where((report) => report.jenisLaporan == 'Laporan Kehilangan').toList();
-        _laporanTemuan = reports.where((report) => report.jenisLaporan == 'Laporan Temuan').toList();
+        // Filter laporan yang belum selesai untuk dashboard utama
+        _laporanHilang = reports.where((report) => report.jenisLaporan == 'Laporan Kehilangan' && report.status != 'Selesai').toList();
+        _laporanTemuan = reports.where((report) => report.jenisLaporan == 'Laporan Temuan' && report.status != 'Selesai').toList();
+        // Laporan selesai untuk halaman kelola
+        _laporanSelesai = reports.where((report) => report.status == 'Selesai').toList();
       });
     } catch (e) {
       print('Error loading reports: $e');
@@ -107,6 +111,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
           _loadReports();
         }
       });
+
     } else {
       setState(() {
         _selectedIndex = index;
@@ -160,6 +165,41 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
     );
   }
 
+  Widget _buildKelolaContent() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: Colors.green,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Laporan Selesai',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ReportListView(
+            reports: _laporanSelesai,
+            onReportTap: _showCompletedReportDetail,
+            emptyMessage: 'Belum ada laporan yang selesai',
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPlaceholderContent(String title) {
     return Center(
       child: Column(
@@ -204,7 +244,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
 
     final List<Widget> pages = [
       _buildHomeContent(),
-      _buildPlaceholderContent('Kelola Laporan'),
+      _buildKelolaContent(),
       _buildPlaceholderContent('Verifikasi Barang'),
       _buildPlaceholderContent('Notifikasi'),
       _buildPlaceholderContent('Profil'),
@@ -306,7 +346,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
                   ),
                 ),
               ),
-              label: 'Kelola',
+              label: 'Riwayat Laporan',
             ),
             BottomNavigationBarItem(
               icon: Padding(
@@ -321,7 +361,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
                   ),
                 ),
               ),
-              label: 'Tambah',
+              label: 'Kelola Laporan',
             ),
             BottomNavigationBarItem(
               icon: Padding(
@@ -363,18 +403,18 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
 
   Future<void> _markAsFound(Report report) async {
     try {
-      await _reportService.deleteReport(report.id);
+      await _reportService.updateReportStatus(report.id, 'Selesai');
       _loadReports(); // Refresh the list
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Laporan berhasil ditandai sebagai ditemukan dan dihapus'),
+          content: Text('Laporan berhasil ditandai sebagai selesai'),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Gagal menandai laporan sebagai ditemukan'),
+          content: Text('Gagal menandai laporan sebagai selesai'),
           backgroundColor: Colors.red,
         ),
       );
@@ -388,9 +428,17 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       backgroundColor: Colors.transparent,
       builder: (context) => ReportDetailModal(
         report: report,
-        showVerificationActions: report.status == 'Proses' || report.status == 'Menunggu Verifikasi' || report.status == 'Selesai',
+        showVerificationActions: report.status == 'Proses',
         onApprove: () => _markAsFound(report),
       ),
+    );
+  }
+
+  void _showCompletedReportDetail(Report report) {
+    ReportDetailModal.show(
+      context: context,
+      report: report,
+      showVerificationActions: false, // Laporan selesai tidak perlu tombol verifikasi
     );
   }
 

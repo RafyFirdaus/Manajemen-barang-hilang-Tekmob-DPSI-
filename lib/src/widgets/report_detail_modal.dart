@@ -321,39 +321,7 @@ class ReportDetailModal extends StatelessWidget {
                   
                   const SizedBox(height: 20),
                   
-                  // Tombol Klaim Barang untuk laporan temuan (hanya untuk user)
-                  if (report.jenisLaporan == 'Laporan Temuan' && !showVerificationActions) ...[                    
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // TODO: Implementasi fungsi klaim barang
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Fitur klaim barang akan segera tersedia'),
-                              backgroundColor: Colors.blue,
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1F41BB),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          'Klaim Barang',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
+                  // Tombol Klaim Barang dihapus sesuai permintaan
                   
                   // Action button untuk menandai ditemukan (hanya untuk satpam)
                   if (showVerificationActions) ...[

@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/report_model.dart';
 import '../services/report_service.dart';
 import '../services/auth_service.dart';
+import 'matching_screen.dart';
 import 'dart:math';
 
 class AddReportScreen extends StatefulWidget {
@@ -17,7 +18,8 @@ class AddReportScreen extends StatefulWidget {
   State<AddReportScreen> createState() => _AddReportScreenState();
 }
 
-class _AddReportScreenState extends State<AddReportScreen> {
+class _AddReportScreenState extends State<AddReportScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _namaBarangController = TextEditingController();
   final _lokasiController = TextEditingController();
@@ -30,6 +32,8 @@ class _AddReportScreenState extends State<AddReportScreen> {
   bool _isLoading = false;
   final ReportService _reportService = ReportService();
   final AuthService _authService = AuthService();
+  late TabController _tabController;
+  String _userRole = '';
 
   final List<String> _jenisLaporanOptions = [
     'Laporan Kehilangan',
@@ -37,10 +41,36 @@ class _AddReportScreenState extends State<AddReportScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadUserRole();
+  }
+
+  Future<void> _loadUserRole() async {
+    try {
+      final userData = await _authService.getUserData();
+      setState(() {
+        _userRole = userData['role'] ?? '';
+        // Set TabController length based on role
+        _tabController = TabController(
+          length: _userRole == 'satpam' ? 2 : 1, 
+          vsync: this
+        );
+      });
+    } catch (e) {
+      setState(() {
+        _userRole = '';
+        _tabController = TabController(length: 1, vsync: this);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _namaBarangController.dispose();
     _lokasiController.dispose();
     _deskripsiController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -255,7 +285,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
           ),
         ),
         title: Text(
-          'Buat Laporan Kehilangan',
+          'Manajemen Laporan',
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -263,12 +293,53 @@ class _AddReportScreenState extends State<AddReportScreen> {
           ),
         ),
         centerTitle: true,
+        bottom: _userRole.isNotEmpty ? TabBar(
+          controller: _tabController,
+          labelColor: const Color(0xFF1F41BB),
+          unselectedLabelColor: Colors.grey.shade600,
+          indicatorColor: const Color(0xFF1F41BB),
+          labelStyle: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          unselectedLabelStyle: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+          tabs: _userRole == 'satpam' 
+            ? const [
+                Tab(text: 'Tambah Laporan'),
+                Tab(text: 'Pencocokan'),
+              ]
+            : const [
+                Tab(text: 'Tambah Laporan'),
+              ],
+        ) : null,
       ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
+      body: _userRole.isNotEmpty 
+        ? TabBarView(
+            controller: _tabController,
+            children: _userRole == 'satpam'
+              ? [
+                  _buildAddReportTab(),
+                  _buildMatchingTab(),
+                ]
+              : [
+                  _buildAddReportTab(),
+                ],
+          )
+        : const Center(
+            child: CircularProgressIndicator(),
+          ),
+    );
+  }
+
+  Widget _buildAddReportTab() {
+    return Form(
+      key: _formKey,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Jenis Laporan Dropdown
@@ -664,9 +735,12 @@ class _AddReportScreenState extends State<AddReportScreen> {
               ),
               const SizedBox(height: 20),
             ],
-          ),
         ),
       ),
     );
+  }
+
+  Widget _buildMatchingTab() {
+    return const MatchingScreen();
   }
 }

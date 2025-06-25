@@ -70,8 +70,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
       if (mounted) {
         setState(() {
           _allReports = reports;
-          _laporanHilang = reports.where((r) => r.jenisLaporan == 'Laporan Kehilangan').toList();
-          _laporanTemuan = reports.where((r) => r.jenisLaporan == 'Laporan Temuan').toList();
+          // Filter laporan yang tidak berstatus 'Selesai' untuk dashboard user
+          _laporanHilang = reports.where((r) => r.jenisLaporan == 'Laporan Kehilangan' && r.status != 'Selesai').toList();
+          _laporanTemuan = reports.where((r) => r.jenisLaporan == 'Laporan Temuan' && r.status != 'Selesai').toList();
         });
       }
     } catch (e) {
