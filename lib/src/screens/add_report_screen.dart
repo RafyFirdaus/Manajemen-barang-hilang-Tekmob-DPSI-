@@ -8,7 +8,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/report_model.dart';
 import '../services/report_service.dart';
 import '../services/auth_service.dart';
-import 'matching_screen.dart';
 import 'dart:math';
 
 class AddReportScreen extends StatefulWidget {
@@ -741,6 +740,34 @@ class _AddReportScreenState extends State<AddReportScreen>
   }
 
   Widget _buildMatchingTab() {
-    return const MatchingScreen();
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.construction,
+            size: 80,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Pencocokan',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Fitur ini sedang dalam pengembangan',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

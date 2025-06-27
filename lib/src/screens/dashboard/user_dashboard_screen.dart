@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../services/auth_service.dart';
-import '../../services/report_service.dart';
-import '../../models/report_model.dart';
 import '../auth/login_screen.dart';
 import '../add_report_screen.dart';
+import '../../models/report_model.dart';
+import '../../services/auth_service.dart';
+import '../../services/report_service.dart';
 import '../../widgets/dashboard_header.dart';
 import '../../widgets/report_list_view.dart';
 import '../../widgets/report_detail_modal.dart';
@@ -64,6 +64,8 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
     }
   }
 
+
+
   Future<void> _loadReports() async {
     try {
       final reports = await _reportService.getAllReports();
@@ -99,11 +101,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
         MaterialPageRoute(
           builder: (context) => const AddReportScreen(),
         ),
-      ).then((result) {
-        // Refresh reports if a new report was added
-        if (result == true) {
-          _loadReports();
-        }
+      ).then((_) {
+        // Refresh reports when returning from add report screen
+        _loadReports();
       });
     } else {
       setState(() {
@@ -111,6 +111,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
       });
     }
   }
+
+
+
 
   Widget _buildHomeContent() {
     return Column(
@@ -182,25 +185,47 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
           ),
           const SizedBox(height: 20),
           Text(
-            title,
+            '$title Coming Soon',
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade600,
             ),
           ),
-          const SizedBox(height: 10),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationPlaceholder() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SvgPicture.asset(
+            'lib/src/assets/images/mingcute_notification-line.svg',
+            height: 80,
+            width: 80,
+            colorFilter: ColorFilter.mode(
+              Colors.grey.shade400,
+              BlendMode.srcIn,
+            ),
+          ),
+          const SizedBox(height: 20),
           Text(
-            'Fitur ini sedang dalam pengembangan',
+            'Fitur ini sedang dikembangkan',
             style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.grey.shade500,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
             ),
           ),
         ],
       ),
     );
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +241,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
       _buildHomeContent(),
       _buildPlaceholderContent('Laporan'),
       _buildPlaceholderContent('Tambah Laporan'),
-      _buildPlaceholderContent('Notifikasi'),
+      _buildNotificationPlaceholder(),
       _buildPlaceholderContent('Profil'),
     ];
 

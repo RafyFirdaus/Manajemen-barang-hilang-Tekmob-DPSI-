@@ -10,6 +10,7 @@ class ReportDetailModal extends StatelessWidget {
   final bool showVerificationActions;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
+  final VoidCallback? onClaim;
 
   const ReportDetailModal({
     Key? key,
@@ -17,6 +18,7 @@ class ReportDetailModal extends StatelessWidget {
     this.showVerificationActions = false,
     this.onApprove,
     this.onReject,
+    this.onClaim,
   }) : super(key: key);
 
   static void show({
@@ -25,6 +27,7 @@ class ReportDetailModal extends StatelessWidget {
     bool showVerificationActions = false,
     VoidCallback? onApprove,
     VoidCallback? onReject,
+    VoidCallback? onClaim,
   }) {
     showModalBottomSheet(
       context: context,
@@ -35,6 +38,7 @@ class ReportDetailModal extends StatelessWidget {
         showVerificationActions: showVerificationActions,
         onApprove: onApprove,
         onReject: onReject,
+        onClaim: onClaim,
       ),
     );
   }
@@ -321,7 +325,34 @@ class ReportDetailModal extends StatelessWidget {
                   
                   const SizedBox(height: 20),
                   
-                  // Tombol Klaim Barang dihapus sesuai permintaan
+                  // Tombol Klaim Barang (hanya muncul jika status cocok)
+                  if (report.status.toLowerCase() == 'cocok') ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          onClaim?.call();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1F41BB),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Klaim Barang',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   
                   // Action button untuk menandai ditemukan (hanya untuk satpam)
                   if (showVerificationActions) ...[

@@ -141,9 +141,17 @@ class FullscreenImageViewer extends StatelessWidget {
           },
         );
       } else {
-        // Fallback for network images or other formats
+        // Handle network images
+        String imageUrl = imagePath;
+        
+        // If it's a relative path, prepend the base URL
+        if (!imagePath.startsWith('http')) {
+          const String baseUrl = 'https://api-manajemen-barang-hilang.vercel.app';
+          imageUrl = '$baseUrl$imagePath';
+        }
+        
         return Image.network(
-          imagePath,
+          imageUrl,
           fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) {
             return Container(

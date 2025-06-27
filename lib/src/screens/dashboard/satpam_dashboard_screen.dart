@@ -8,7 +8,8 @@ import '../../widgets/dashboard_header.dart';
 import '../../widgets/report_list_view.dart';
 import '../../widgets/report_detail_modal.dart';
 import '../auth/login_screen.dart';
-import '../add_report_screen.dart';
+import '../matching/matching_screen.dart';
+import '../claim/claim_form_screen.dart';
 
 class SatpamDashboardScreen extends StatefulWidget {
   const SatpamDashboardScreen({Key? key}) : super(key: key);
@@ -70,6 +71,8 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
     }
   }
 
+
+
   Future<void> _loadReports() async {
     try {
       final reports = await _reportService.getAllReports();
@@ -98,26 +101,12 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
   }
 
   void _onItemTapped(int index) {
-    if (index == 2) {
-      // Navigate to Add Report Screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const AddReportScreen(),
-        ),
-      ).then((result) {
-        // Refresh reports if a new report was added
-        if (result == true) {
-          _loadReports();
-        }
-      });
-
-    } else {
-      setState(() {
-        _selectedIndex = index;
-      });
-    }
+    setState(() {
+      _selectedIndex = index;
+    });
   }
+
+
 
   Widget _buildHomeContent() {
     return Column(
@@ -232,6 +221,36 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
     );
   }
 
+  Widget _buildNotificationPlaceholder() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SvgPicture.asset(
+            'lib/src/assets/images/mingcute_notification-line.svg',
+            height: 80,
+            width: 80,
+            colorFilter: ColorFilter.mode(
+              Colors.grey.shade400,
+              BlendMode.srcIn,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Fitur ini sedang dikembangkan',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -245,8 +264,8 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
     final List<Widget> pages = [
       _buildHomeContent(),
       _buildKelolaContent(),
-      _buildPlaceholderContent('Verifikasi Barang'),
-      _buildPlaceholderContent('Notifikasi'),
+      MatchingScreen(onReportsUpdated: _loadReports),
+      _buildNotificationPlaceholder(),
       _buildPlaceholderContent('Profil'),
     ];
 
@@ -346,13 +365,13 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
                   ),
                 ),
               ),
-              label: 'Riwayat Laporan',
+              label: 'Riwayat Selesai',
             ),
             BottomNavigationBarItem(
               icon: Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: SvgPicture.asset(
-                  'lib/src/assets/images/icon-park-outline_add.svg',
+                  'lib/src/assets/images/mdi_folder-sync.svg',
                   height: 24,
                   width: 24,
                   colorFilter: ColorFilter.mode(
@@ -361,7 +380,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
                   ),
                 ),
               ),
-              label: 'Kelola Laporan',
+              label: 'Pencocokan',
             ),
             BottomNavigationBarItem(
               icon: Padding(
@@ -404,6 +423,8 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
   Future<void> _markAsFound(Report report) async {
     try {
       await _reportService.updateReportStatus(report.id, 'Selesai');
+      
+      
       _loadReports(); // Refresh the list
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -428,8 +449,9 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       backgroundColor: Colors.transparent,
       builder: (context) => ReportDetailModal(
         report: report,
-        showVerificationActions: report.status == 'Proses',
+        showVerificationActions: false,
         onApprove: () => _markAsFound(report),
+        onClaim: () => _navigateToClaimForm(report),
       ),
     );
   }
@@ -440,6 +462,20 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       report: report,
       showVerificationActions: false, // Laporan selesai tidak perlu tombol verifikasi
     );
+  }
+
+  Future<void> _navigateToClaimForm(Report report) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ClaimFormScreen(report: report),
+      ),
+    );
+    
+    // Jika form klaim berhasil disubmit, refresh data
+    if (result == true) {
+      _loadReports();
+    }
   }
 
 
