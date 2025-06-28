@@ -7,7 +7,6 @@ class ReportListView extends StatelessWidget {
   final String emptyMessage;
   final Function(Report) onReportTap;
   final bool showVerificationActions;
-
   const ReportListView({
     Key? key,
     required this.reports,

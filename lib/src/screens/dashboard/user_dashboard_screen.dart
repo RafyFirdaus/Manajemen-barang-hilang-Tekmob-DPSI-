@@ -3,9 +3,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../auth/login_screen.dart';
 import '../add_report_screen.dart';
+import '../reports/user_reports_screen.dart';
+import '../notifications/notifications_screen.dart';
 import '../../models/report_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/report_service.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/dashboard_header.dart';
 import '../../widgets/report_list_view.dart';
 import '../../widgets/report_detail_modal.dart';
@@ -21,9 +24,12 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
     with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   String _username = '';
+  String _currentUserId = '';
   bool _isLoading = true;
+  int _unreadNotificationCount = 0;
   final AuthService _authService = AuthService();
   final ReportService _reportService = ReportService();
+  final NotificationService _notificationService = NotificationService();
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   // ignore: unused_field
@@ -52,14 +58,30 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
       if (mounted) {
         setState(() {
           _username = userData['username'] ?? 'User';
+          _currentUserId = userData['id'] ?? '';
           _isLoading = false;
         });
+        // Load notification count
+        await _loadNotificationCount();
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _loadNotificationCount() async {
+    if (_currentUserId.isNotEmpty) {
+      try {
+        final count = await _notificationService.getUnreadCountForUser(_currentUserId);
+        setState(() {
+          _unreadNotificationCount = count;
+        });
+      } catch (e) {
+        print('Error loading notification count: $e');
       }
     }
   }
@@ -76,6 +98,8 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
           _laporanHilang = reports.where((r) => r.jenisLaporan == 'Laporan Kehilangan' && r.status != 'Selesai').toList();
           _laporanTemuan = reports.where((r) => r.jenisLaporan == 'Laporan Temuan' && r.status != 'Selesai').toList();
         });
+        // Refresh notification count
+        _loadNotificationCount();
       }
     } catch (e) {
       print('Error loading reports: $e');
@@ -94,7 +118,18 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
   }
 
   void _onItemTapped(int index) {
-    if (index == 2) {
+    if (index == 1) {
+      // Navigate to User Reports Screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const UserReportsScreen(),
+        ),
+      ).then((_) {
+        // Refresh reports when returning from reports screen
+        _loadReports();
+      });
+    } else if (index == 2) {
       // Navigate to Add Report Screen
       Navigator.push(
         context,
@@ -104,6 +139,17 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
       ).then((_) {
         // Refresh reports when returning from add report screen
         _loadReports();
+      });
+    } else if (index == 3) {
+      // Navigate to Notifications Screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const NotificationsScreen(),
+        ),
+      ).then((_) {
+        // Refresh notification count when returning
+        _loadNotificationCount();
       });
     } else {
       setState(() {
@@ -361,14 +407,43 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
             BottomNavigationBarItem(
               icon: Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: SvgPicture.asset(
-                  'lib/src/assets/images/mingcute_notification-line.svg',
-                  height: 24,
-                  width: 24,
-                  colorFilter: ColorFilter.mode(
-                    _selectedIndex == 3 ? const Color(0xFF1F41BB) : Colors.grey.shade400,
-                    BlendMode.srcIn,
-                  ),
+                child: Stack(
+                  children: [
+                    SvgPicture.asset(
+                      'lib/src/assets/images/mingcute_notification-line.svg',
+                      height: 24,
+                      width: 24,
+                      colorFilter: ColorFilter.mode(
+                        _selectedIndex == 3 ? const Color(0xFF1F41BB) : Colors.grey.shade400,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    if (_unreadNotificationCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            _unreadNotificationCount > 99 ? '99+' : _unreadNotificationCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               label: 'Notifikasi',

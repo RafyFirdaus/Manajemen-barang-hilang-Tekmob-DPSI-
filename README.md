@@ -20,6 +20,7 @@
   - Filter berdasarkan jenis laporan
   - Pencarian laporan
   - Membuat laporan baru
+  - **Riwayat Laporan**: Melihat semua laporan yang dibuat oleh user
 - **Satpam Dashboard**:
   - Mengelola semua laporan
 
@@ -46,6 +47,7 @@
   - `POST /register` - Registrasi pengguna baru
   - `GET /reports` - Mengambil semua laporan
   - `POST /reports` - Membuat laporan baru
+  - `GET /reports/user/:userId` - Mengambil laporan berdasarkan user ID
   - `PUT /reports/:id/status` - Update status laporan
   - `DELETE /reports/:id` - Hapus laporan
 - **Fallback System**: Local storage sebagai backup jika API tidak tersedia
@@ -130,6 +132,83 @@ Aplikasi sudah dikonfigurasi untuk menggunakan API Express yang di-deploy di Ver
 - **Input Validation**: Validasi lengkap pada semua form input
 - **Error Handling**: Penanganan error yang komprehensif
 - **Offline Support**: Fallback ke local storage jika API tidak tersedia
+
+## 📊 Fitur Riwayat Laporan
+
+### Deskripsi
+Fitur ini memungkinkan user untuk melihat semua laporan yang pernah mereka buat, baik laporan barang hilang maupun laporan barang temuan.
+
+### Fitur Utama
+- **Tampilan Terorganisir**: Laporan dipisahkan dalam tab "Barang Hilang" dan "Barang Temuan"
+- **Indikator Status**: Setiap laporan menampilkan status terkini (Proses, Terverifikasi, Selesai, dll.)
+- **Informasi Lengkap**: Menampilkan nama barang, lokasi, tanggal kejadian, dan tanggal pembuatan
+- **Refresh**: Fitur pull-to-refresh untuk memperbarui data
+- **Integrasi API**: Mengambil data dari server dengan fallback ke penyimpanan lokal
+- **Fallback Lokal**: Jika API tidak tersedia, data diambil dari SharedPreferences
+
+### Cara Penggunaan
+1. Login ke aplikasi sebagai user
+2. Klik tab "Laporan" di bottom navigation
+3. Pilih tab "Barang Hilang" atau "Barang Temuan"
+4. Tap pada kartu laporan untuk melihat detail lengkap
+5. Pull down untuk refresh data
+
+### Implementasi Teknis
+- **Screen**: `UserReportsScreen` di `/lib/src/screens/reports/`
+- **Service**: Method `getReportsByUserId()` di `ReportService`
+- **API Endpoint**: `GET /api/reports/user/:userId`
+- **Navigasi**: Terintegrasi dengan bottom navigation bar di dashboard user
+
+### Troubleshooting
+**Masalah**: Laporan yang dibuat user tidak muncul di halaman riwayat laporan
+**Solusi**: Pastikan `userId` yang digunakan saat menyimpan laporan sama dengan yang digunakan saat mengambil laporan. Dalam implementasi ini, menggunakan `userData['id']` untuk konsistensi.
+
+## Fitur Notifikasi
+
+Aplikasi ini dilengkapi dengan sistem notifikasi yang akan memberitahu user ketika status laporan mereka berubah.
+
+### Kapan Notifikasi Muncul
+- Ketika status laporan berubah dari "Proses" ke "Cocok" (laporan berhasil dicocokkan oleh satpam)
+- Ketika status laporan berubah ke "Terverifikasi"
+- Ketika status laporan berubah ke "Selesai"
+
+### Fitur Notifikasi
+- **Badge Notifikasi**: Menampilkan jumlah notifikasi yang belum dibaca di navbar
+- **Daftar Notifikasi**: Menampilkan semua notifikasi dengan detail perubahan status
+- **Tandai Dibaca**: User dapat menandai notifikasi sebagai sudah dibaca
+- **Navigasi**: Tap notifikasi untuk melihat detail laporan terkait
+- **Hapus Notifikasi**: User dapat menghapus notifikasi yang tidak diperlukan
+
+### Cara Menggunakan
+1. Buka aplikasi dan login sebagai user
+2. Buat laporan baru melalui menu "Tambah"
+3. Tunggu satpam memproses dan mengubah status laporan
+4. Notifikasi akan muncul di navbar dengan badge merah
+5. Tap menu "Notifikasi" untuk melihat detail notifikasi
+6. Tap notifikasi untuk melihat detail laporan atau tandai sebagai dibaca
+
+## Troubleshooting
+
+### User Reports Not Appearing
+Jika laporan yang dibuat user tidak muncul di halaman riwayat laporan:
+
+1. **Periksa konsistensi userId**: Pastikan `userId` yang digunakan untuk menyimpan dan mengambil laporan konsisten
+2. **Gunakan `userData['id']`**: Dalam `add_report_screen.dart`, pastikan menggunakan `userData['id']` sebagai `userId`, bukan `userData['email']`
+3. **Restart aplikasi**: Setelah melakukan perubahan, restart aplikasi untuk memastikan perubahan diterapkan
+
+Contoh implementasi yang benar:
+```dart
+final userData = await _authService.getUserData();
+final userId = userData['id']; // Gunakan 'id', bukan 'email'
+```
+
+### Notifikasi Tidak Muncul
+Jika notifikasi tidak muncul setelah status laporan berubah:
+
+1. **Periksa userId**: Pastikan `userId` yang digunakan konsisten antara laporan dan notifikasi
+2. **Restart aplikasi**: Tutup dan buka kembali aplikasi untuk refresh data
+3. **Periksa status laporan**: Notifikasi hanya muncul untuk perubahan status tertentu (Proses → Cocok)
+4. **Clear cache**: Hapus data aplikasi jika diperlukan
 
 ## Kontribusi
 

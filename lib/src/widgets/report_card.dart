@@ -7,7 +7,6 @@ class ReportCard extends StatelessWidget {
   final Report report;
   final VoidCallback onTap;
   final bool showVerificationActions;
-
   const ReportCard({
     Key? key,
     required this.report,

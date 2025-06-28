@@ -208,7 +208,7 @@ class _AddReportScreenState extends State<AddReportScreen>
       
       // Get current user info
       final userData = await _authService.getUserData();
-      final userId = userData['email'] ?? 'unknown';
+      final userId = userData['id'] ?? 'unknown';
       
       // Convert XFile paths to base64 strings for storage
       final fotoPaths = <String>[];

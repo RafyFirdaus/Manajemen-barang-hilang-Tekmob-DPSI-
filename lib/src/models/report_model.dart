@@ -9,6 +9,7 @@ class Report {
   final DateTime tanggalDibuat;
   final String status;
   final String userId;
+  final String? matchedReportId; // ID laporan yang dicocokan
 
   Report({
     required this.id,
@@ -21,6 +22,7 @@ class Report {
     required this.tanggalDibuat,
     required this.status,
     required this.userId,
+    this.matchedReportId,
   });
 
   Map<String, dynamic> toJson() {
@@ -35,6 +37,7 @@ class Report {
       'tanggalDibuat': tanggalDibuat.toIso8601String(),
       'status': status,
       'userId': userId,
+      'matchedReportId': matchedReportId,
     };
   }
 
@@ -50,6 +53,7 @@ class Report {
       tanggalDibuat: DateTime.parse(json['tanggalDibuat']),
       status: json['status'],
       userId: json['userId'],
+      matchedReportId: json['matchedReportId'],
     );
   }
 }

@@ -52,8 +52,8 @@ class _ClaimFormScreenState extends State<ClaimFormScreen> {
     });
 
     try {
-      // Update status laporan menjadi 'Selesai'
-      await _reportService.updateReportStatus(widget.report.id, 'Selesai');
+      // Klaim barang - update kedua laporan yang cocok menjadi 'Selesai'
+      await _reportService.claimMatchedReports(widget.report.id);
       
 
       

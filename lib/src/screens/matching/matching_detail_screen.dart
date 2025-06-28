@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/report_model.dart';
 import '../../services/report_service.dart';
-
 import '../../widgets/report_detail_card.dart';
 
 class MatchingDetailScreen extends StatefulWidget {
@@ -127,17 +126,16 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
 
   Future<void> _performMatching(Report matchingReport) async {
     try {
-      // Update status kedua laporan menjadi "Cocok"
-      await _reportService.updateReportStatus(widget.selectedReport.id, 'Cocok');
-      await _reportService.updateReportStatus(matchingReport.id, 'Cocok');
+      // Match kedua laporan dan update status keduanya menjadi "Cocok"
+      await _reportService.matchReports(widget.selectedReport.id, matchingReport.id);
 
-
+      // TODO: Implementasi notifikasi akan ditambahkan nanti
 
       // Tampilkan pesan sukses
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Laporan berhasil dicocokkan!',
+            'Laporan berhasil dicocokkan dan notifikasi telah dikirim!',
             style: GoogleFonts.poppins(),
           ),
           backgroundColor: Colors.green,

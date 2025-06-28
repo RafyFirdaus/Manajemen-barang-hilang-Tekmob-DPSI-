@@ -220,37 +220,6 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       ),
     );
   }
-
-  Widget _buildNotificationPlaceholder() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SvgPicture.asset(
-            'lib/src/assets/images/mingcute_notification-line.svg',
-            height: 80,
-            width: 80,
-            colorFilter: ColorFilter.mode(
-              Colors.grey.shade400,
-              BlendMode.srcIn,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Fitur ini sedang dikembangkan',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -265,7 +234,6 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       _buildHomeContent(),
       _buildKelolaContent(),
       MatchingScreen(onReportsUpdated: _loadReports),
-      _buildNotificationPlaceholder(),
       _buildPlaceholderContent('Profil'),
     ];
 
@@ -386,26 +354,11 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
               icon: Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: SvgPicture.asset(
-                  'lib/src/assets/images/mingcute_notification-line.svg',
-                  height: 24,
-                  width: 24,
-                  colorFilter: ColorFilter.mode(
-                    _selectedIndex == 3 ? const Color(0xFF1F41BB) : Colors.grey.shade400,
-                    BlendMode.srcIn,
-                  ),
-                ),
-              ),
-              label: 'Notifikasi',
-            ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: SvgPicture.asset(
                   'lib/src/assets/images/iconamoon_profile-light.svg',
                   height: 24,
                   width: 24,
                   colorFilter: ColorFilter.mode(
-                    _selectedIndex == 4 ? const Color(0xFF1F41BB) : Colors.grey.shade400,
+                    _selectedIndex == 3 ? const Color(0xFF1F41BB) : Colors.grey.shade400,
                     BlendMode.srcIn,
                   ),
                 ),
@@ -422,7 +375,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
 
   Future<void> _markAsFound(Report report) async {
     try {
-      await _reportService.updateReportStatus(report.id, 'Selesai');
+      await _reportService.claimMatchedReports(report.id);
       
       
       _loadReports(); // Refresh the list
@@ -463,6 +416,8 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       showVerificationActions: false, // Laporan selesai tidak perlu tombol verifikasi
     );
   }
+
+
 
   Future<void> _navigateToClaimForm(Report report) async {
     final result = await Navigator.push(
