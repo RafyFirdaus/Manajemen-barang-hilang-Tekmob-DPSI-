@@ -3,6 +3,8 @@ class Report {
   final String jenisLaporan;
   final String namaBarang;
   final String lokasi;
+  final String? kategoriId; // ID kategori barang
+  final String? lokasiId; // ID lokasi klaim
   final DateTime tanggalKejadian;
   final String deskripsi;
   final List<String> fotoPaths;
@@ -16,6 +18,8 @@ class Report {
     required this.jenisLaporan,
     required this.namaBarang,
     required this.lokasi,
+    this.kategoriId,
+    this.lokasiId,
     required this.tanggalKejadian,
     required this.deskripsi,
     required this.fotoPaths,
@@ -31,6 +35,8 @@ class Report {
       'jenisLaporan': jenisLaporan,
       'namaBarang': namaBarang,
       'lokasi': lokasi,
+      'kategoriId': kategoriId,
+      'lokasiId': lokasiId,
       'tanggalKejadian': tanggalKejadian.toIso8601String(),
       'deskripsi': deskripsi,
       'fotoPaths': fotoPaths,
@@ -47,6 +53,8 @@ class Report {
       jenisLaporan: json['jenisLaporan'],
       namaBarang: json['namaBarang'],
       lokasi: json['lokasi'],
+      kategoriId: json['kategoriId'],
+      lokasiId: json['lokasiId'],
       tanggalKejadian: DateTime.parse(json['tanggalKejadian']),
       deskripsi: json['deskripsi'],
       fotoPaths: List<String>.from(json['fotoPaths']),

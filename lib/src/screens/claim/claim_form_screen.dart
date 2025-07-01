@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../models/report_model.dart';
+import '../../models/kategori_model.dart';
+import '../../models/lokasi_model.dart';
 import '../../services/report_service.dart';
+import '../../services/kategori_service.dart';
+import '../../services/lokasi_service.dart';
 
 
 class ClaimFormScreen extends StatefulWidget {
@@ -21,8 +25,18 @@ class _ClaimFormScreenState extends State<ClaimFormScreen> {
   final _lokasiKehilanganController = TextEditingController();
   final _kategoriBarangController = TextEditingController();
   final ReportService _reportService = ReportService();
+  final KategoriService _kategoriService = KategoriService();
+  final LokasiService _lokasiService = LokasiService();
 
   bool _isLoading = false;
+  
+  // New fields for kategori and lokasi
+  List<Kategori> _kategoriList = [];
+  List<Lokasi> _lokasiList = [];
+  String? _selectedKategoriId;
+  String? _selectedLokasiId;
+  bool _isLoadingKategori = false;
+  bool _isLoadingLokasi = false;
 
   @override
   void initState() {
@@ -31,6 +45,66 @@ class _ClaimFormScreenState extends State<ClaimFormScreen> {
     _tanggalKehilanganController.text = DateFormat('dd/MM/yyyy').format(widget.report.tanggalKejadian);
     _lokasiKehilanganController.text = widget.report.lokasi;
     _kategoriBarangController.text = widget.report.namaBarang;
+    
+    // Load kategori and lokasi data
+    _loadKategoriData();
+    _loadLokasiData();
+    
+    // Set selected values if available
+    _selectedKategoriId = widget.report.kategoriId;
+    _selectedLokasiId = widget.report.lokasiId;
+  }
+  
+  Future<void> _loadKategoriData() async {
+    setState(() {
+      _isLoadingKategori = true;
+    });
+    
+    try {
+      final kategoriList = await _kategoriService.getAllKategori();
+      setState(() {
+        _kategoriList = kategoriList;
+        _isLoadingKategori = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingKategori = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat data kategori: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+  
+  Future<void> _loadLokasiData() async {
+    setState(() {
+      _isLoadingLokasi = true;
+    });
+    
+    try {
+      final lokasiList = await _lokasiService.getAllLokasi();
+      setState(() {
+        _lokasiList = lokasiList;
+        _isLoadingLokasi = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingLokasi = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat data lokasi: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -306,37 +380,130 @@ class _ClaimFormScreenState extends State<ClaimFormScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              TextFormField(
-                controller: _kategoriBarangController,
-                decoration: InputDecoration(
-                  hintText: 'Masukkan kategori/jenis barang',
-                  hintStyle: GoogleFonts.poppins(
-                    color: Colors.grey.shade500,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF1F41BB)),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
+              _isLoadingKategori
+                  ? Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  : DropdownButtonFormField<String>(
+                      value: _selectedKategoriId,
+                      decoration: InputDecoration(
+                        hintText: 'Pilih kategori barang',
+                        hintStyle: GoogleFonts.poppins(
+                          color: Colors.grey.shade500,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF1F41BB)),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                      ),
+                      items: _kategoriList.map((kategori) {
+                        return DropdownMenuItem<String>(
+                          value: kategori.idKategori,
+                          child: Text(
+                            kategori.namaKategori,
+                            style: GoogleFonts.poppins(),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedKategoriId = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Kategori barang harus dipilih';
+                        }
+                        return null;
+                      },
+                    ),
+              
+              const SizedBox(height: 20),
+              
+              Text(
+                'Lokasi Klaim',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Kategori barang harus diisi';
-                  }
-                  return null;
-                },
               ),
+              const SizedBox(height: 8),
+              _isLoadingLokasi
+                  ? Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  : DropdownButtonFormField<String>(
+                      value: _selectedLokasiId,
+                      decoration: InputDecoration(
+                        hintText: 'Pilih lokasi klaim',
+                        hintStyle: GoogleFonts.poppins(
+                          color: Colors.grey.shade500,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF1F41BB)),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                      ),
+                      items: _lokasiList.map((lokasi) {
+                        return DropdownMenuItem<String>(
+                          value: lokasi.idLokasiKlaim,
+                          child: Text(
+                            lokasi.lokasiKlaim,
+                            style: GoogleFonts.poppins(),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedLokasiId = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Lokasi klaim harus dipilih';
+                        }
+                        return null;
+                      },
+                    ),
               
               const SizedBox(height: 32),
               

@@ -6,8 +6,12 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/report_model.dart';
+import '../models/kategori_model.dart';
+import '../models/lokasi_model.dart';
 import '../services/report_service.dart';
 import '../services/auth_service.dart';
+import '../services/kategori_service.dart';
+import '../services/lokasi_service.dart';
 import 'dart:math';
 
 class AddReportScreen extends StatefulWidget {
@@ -31,8 +35,18 @@ class _AddReportScreenState extends State<AddReportScreen>
   bool _isLoading = false;
   final ReportService _reportService = ReportService();
   final AuthService _authService = AuthService();
+  final KategoriService _kategoriService = KategoriService();
+  final LokasiService _lokasiService = LokasiService();
   late TabController _tabController;
   String _userRole = '';
+  
+  // New fields for kategori and lokasi
+  List<Kategori> _kategoriList = [];
+  List<Lokasi> _lokasiList = [];
+  String? _selectedKategoriId;
+  String? _selectedLokasiId;
+  bool _isLoadingKategori = false;
+  bool _isLoadingLokasi = false;
 
   final List<String> _jenisLaporanOptions = [
     'Laporan Kehilangan',
@@ -43,6 +57,8 @@ class _AddReportScreenState extends State<AddReportScreen>
   void initState() {
     super.initState();
     _loadUserRole();
+    _loadKategoriData();
+    _loadLokasiData();
   }
 
   Future<void> _loadUserRole() async {
@@ -61,6 +77,58 @@ class _AddReportScreenState extends State<AddReportScreen>
         _userRole = '';
         _tabController = TabController(length: 1, vsync: this);
       });
+    }
+  }
+
+  Future<void> _loadKategoriData() async {
+    setState(() {
+      _isLoadingKategori = true;
+    });
+    
+    try {
+      final kategoriList = await _kategoriService.getAllKategori();
+      setState(() {
+        _kategoriList = kategoriList;
+        _isLoadingKategori = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingKategori = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat data kategori: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadLokasiData() async {
+    setState(() {
+      _isLoadingLokasi = true;
+    });
+    
+    try {
+      final lokasiList = await _lokasiService.getAllLokasi();
+      setState(() {
+        _lokasiList = lokasiList;
+        _isLoadingLokasi = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingLokasi = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat data lokasi: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     }
   }
 
@@ -229,6 +297,8 @@ class _AddReportScreenState extends State<AddReportScreen>
         jenisLaporan: _jenisLaporan,
         namaBarang: _namaBarangController.text,
         lokasi: _lokasiController.text,
+        kategoriId: _selectedKategoriId,
+        lokasiId: _selectedLokasiId,
         tanggalKejadian: _tanggalKejadian!,
         deskripsi: _deskripsiController.text,
         fotoPaths: fotoPaths,
@@ -428,7 +498,70 @@ class _AddReportScreenState extends State<AddReportScreen>
               ),
               const SizedBox(height: 20),
 
-              // Lokasi Kehilangan
+              // Kategori Barang
+              Text(
+                'Kategori Barang',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: _isLoadingKategori
+                    ? const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 12),
+                            Text('Memuat kategori...'),
+                          ],
+                        ),
+                      )
+                    : DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedKategoriId,
+                          hint: Text(
+                            'Pilih Kategori',
+                            style: GoogleFonts.poppins(
+                              color: Colors.grey.shade500,
+                              fontSize: 14,
+                            ),
+                          ),
+                          isExpanded: true,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                          items: _kategoriList.map((Kategori kategori) {
+                            return DropdownMenuItem<String>(
+                              value: kategori.idKategori,
+                              child: Text(kategori.namaKategori),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              _selectedKategoriId = newValue;
+                            });
+                          },
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 20),
+
+              // Lokasi Kehilangan/Penemuan (Dropdown)
               Text(
                 _jenisLaporan == 'Laporan Kehilangan' 
                     ? 'Lokasi Kehilangan' 
@@ -440,41 +573,60 @@ class _AddReportScreenState extends State<AddReportScreen>
                 ),
               ),
               const SizedBox(height: 8),
-              TextFormField(
-                controller: _lokasiController,
-                decoration: InputDecoration(
-                  hintText: _jenisLaporan == 'Laporan Kehilangan'
-                      ? 'Masukkan lokasi kehilangan'
-                      : 'Masukkan lokasi penemuan',
-                  hintStyle: GoogleFonts.poppins(
-                    color: Colors.grey.shade500,
-                    fontSize: 14,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF1F41BB)),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Lokasi tidak boleh kosong';
-                  }
-                  return null;
-                },
+                child: _isLoadingLokasi
+                    ? const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 12),
+                            Text('Memuat lokasi...'),
+                          ],
+                        ),
+                      )
+                    : DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedLokasiId,
+                          hint: Text(
+                            _jenisLaporan == 'Laporan Kehilangan'
+                                ? 'Pilih lokasi kehilangan'
+                                : 'Pilih lokasi penemuan',
+                            style: GoogleFonts.poppins(
+                              color: Colors.grey.shade500,
+                              fontSize: 14,
+                            ),
+                          ),
+                          isExpanded: true,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                          items: _lokasiList.map((Lokasi lokasi) {
+                            return DropdownMenuItem<String>(
+                              value: lokasi.idLokasiKlaim,
+                              child: Text(lokasi.lokasiKlaim),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              _selectedLokasiId = newValue;
+                            });
+                          },
+                        ),
+                      ),
               ),
-              const SizedBox(height: 20),
+               const SizedBox(height: 20),
 
               // Tanggal Kejadian
               Text(
@@ -500,23 +652,22 @@ class _AddReportScreenState extends State<AddReportScreen>
                   ),
                   child: Row(
                     children: [
-                      Expanded(
-                        child: Text(
-                          _tanggalKejadian != null
-                              ? '${_tanggalKejadian!.day}/${_tanggalKejadian!.month}/${_tanggalKejadian!.year}'
-                              : 'Pilih Tanggal',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: _tanggalKejadian != null
-                                ? Colors.black87
-                                : Colors.grey.shade500,
-                          ),
-                        ),
-                      ),
                       Icon(
                         Icons.calendar_today,
-                        color: Colors.grey.shade500,
+                        color: Colors.grey.shade600,
                         size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        _tanggalKejadian != null
+                            ? '${_tanggalKejadian!.day}/${_tanggalKejadian!.month}/${_tanggalKejadian!.year}'
+                            : 'Pilih Tanggal',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: _tanggalKejadian != null
+                              ? Colors.black87
+                              : Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
@@ -569,9 +720,9 @@ class _AddReportScreenState extends State<AddReportScreen>
               ),
               const SizedBox(height: 20),
 
-              // Foto Barang
+              // Upload Foto
               Text(
-                'Foto Barang (jika ada)',
+                'Upload Foto',
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -579,45 +730,42 @@ class _AddReportScreenState extends State<AddReportScreen>
                 ),
               ),
               const SizedBox(height: 8),
-              
-              // Upload Photo Button
               InkWell(
                 onTap: _pickImages,
                 child: Container(
                   width: double.infinity,
-                  height: 120,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 20,
+                  ),
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: Colors.grey.shade300,
                       style: BorderStyle.solid,
-                      width: 2,
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.camera_alt_outlined,
+                        Icons.cloud_upload_outlined,
                         size: 40,
-                        color: Colors.grey.shade500,
+                        color: Colors.grey.shade600,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Unggah Foto',
+                        'Tap untuk upload foto',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
-                          color: Colors.grey.shade500,
+                          color: Colors.grey.shade600,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              
-              // Selected Images
               if (_selectedImages.isNotEmpty) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 SizedBox(
                   height: 100,
                   child: ListView.builder(
@@ -641,16 +789,15 @@ class _AddReportScreenState extends State<AddReportScreen>
                                             height: 100,
                                             fit: BoxFit.cover,
                                           );
-                                        } else {
-                                          return Container(
-                                            width: 100,
-                                            height: 100,
-                                            color: Colors.grey.shade200,
-                                            child: const Center(
-                                              child: CircularProgressIndicator(),
-                                            ),
-                                          );
                                         }
+                                        return Container(
+                                          width: 100,
+                                          height: 100,
+                                          color: Colors.grey.shade300,
+                                          child: const Center(
+                                            child: CircularProgressIndicator(),
+                                          ),
+                                        );
                                       },
                                     )
                                   : Image.file(
@@ -658,17 +805,6 @@ class _AddReportScreenState extends State<AddReportScreen>
                                       width: 100,
                                       height: 100,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Container(
-                                          width: 100,
-                                          height: 100,
-                                          color: Colors.grey.shade200,
-                                          child: const Icon(
-                                            Icons.error,
-                                            color: Colors.red,
-                                          ),
-                                        );
-                                      },
                                     ),
                             ),
                             Positioned(
@@ -697,8 +833,7 @@ class _AddReportScreenState extends State<AddReportScreen>
                   ),
                 ),
               ],
-              
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
 
               // Submit Button
               SizedBox(
@@ -723,7 +858,7 @@ class _AddReportScreenState extends State<AddReportScreen>
                           ),
                         )
                       : Text(
-                          'Kirim',
+                          'Kirim Laporan',
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -732,11 +867,10 @@ class _AddReportScreenState extends State<AddReportScreen>
                         ),
                 ),
               ),
-              const SizedBox(height: 20),
             ],
+          ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildMatchingTab() {
@@ -745,15 +879,15 @@ class _AddReportScreenState extends State<AddReportScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.construction,
+            Icons.search,
             size: 80,
             color: Colors.grey.shade400,
           ),
           const SizedBox(height: 20),
           Text(
-            'Pencocokan',
+            'Fitur Pencocokan',
             style: GoogleFonts.poppins(
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade600,
             ),
