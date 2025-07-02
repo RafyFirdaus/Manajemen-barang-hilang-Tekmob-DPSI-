@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     
     <application
-        android:label="manejemen_barang_hilanh"
+        android:label="SIMPANG-UAD - Sistem Informasi Penemuan Barang Hilang"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
