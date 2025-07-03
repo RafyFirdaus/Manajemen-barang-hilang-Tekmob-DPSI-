@@ -41,7 +41,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
       _matchingCandidates = widget.allReports
           .where((report) =>
               report.jenisLaporan == targetType &&
-              report.status != 'Selesai' &&
+              report.status != 'selesai' &&
               report.id != widget.selectedReport.id)
           .toList();
     });

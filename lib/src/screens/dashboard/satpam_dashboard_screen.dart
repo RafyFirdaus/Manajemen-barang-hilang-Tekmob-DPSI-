@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../models/report_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/report_service.dart';
-import '../../models/report_model.dart';
 import '../../widgets/dashboard_header.dart';
 import '../../widgets/report_list_view.dart';
 import '../../widgets/report_detail_modal.dart';
 import '../auth/login_screen.dart';
 import '../matching/matching_screen.dart';
 
-
 class SatpamDashboardScreen extends StatefulWidget {
-  const SatpamDashboardScreen({Key? key}) : super(key: key);
+  final int initialTabIndex;
+  const SatpamDashboardScreen({Key? key, this.initialTabIndex = 0}) : super(key: key);
 
   @override
   State<SatpamDashboardScreen> createState() => _SatpamDashboardScreenState();
@@ -27,8 +27,6 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
   final ReportService _reportService = ReportService();
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
-  // ignore: unused_field
-  List<Report> _allReports = [];
   List<Report> _laporanHilang = [];
   List<Report> _laporanTemuan = [];
   List<Report> _laporanSelesai = [];
@@ -39,6 +37,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialTabIndex;
     _tabController = TabController(length: 2, vsync: this);
     _loadUserData();
     _loadReports();
@@ -74,18 +73,15 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
     }
   }
 
-
-
   Future<void> _loadReports() async {
     try {
       final reports = await _reportService.getAllReports();
       setState(() {
-        _allReports = reports;
         // Filter laporan yang belum selesai untuk dashboard utama
-        _laporanHilang = reports.where((report) => report.jenisLaporan == 'hilang' && report.status != 'Selesai').toList();
-         _laporanTemuan = reports.where((report) => report.jenisLaporan == 'temuan' && report.status != 'Selesai').toList();
+        _laporanHilang = reports.where((report) => report.jenisLaporan == 'hilang' && report.status != 'selesai').toList();
+         _laporanTemuan = reports.where((report) => report.jenisLaporan == 'temuan' && report.status != 'selesai').toList();
         // Laporan selesai untuk halaman kelola
-        _laporanSelesai = reports.where((report) => report.status == 'Selesai').toList();
+        _laporanSelesai = reports.where((report) => report.status == 'selesai').toList();
         _filterReports();
       });
     } catch (e) {
@@ -130,8 +126,6 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       _selectedIndex = index;
     });
   }
-
-
 
   Widget _buildHomeContent() {
     return Column(
@@ -219,37 +213,6 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
     );
   }
 
-  Widget _buildPlaceholderContent(String title) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.construction,
-            size: 80,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Fitur ini sedang dalam pengembangan',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -264,7 +227,6 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       _buildHomeContent(),
       _buildKelolaContent(),
       MatchingScreen(onReportsUpdated: _loadReports),
-      _buildPlaceholderContent('Profil'),
     ];
 
     return Scaffold(
@@ -284,7 +246,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
             Text(
               'Manajemen Barang Hilang',
               style: GoogleFonts.poppins(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFF1F41BB),
               ),
@@ -380,37 +342,16 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
               ),
               label: 'Pencocokan',
             ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: SvgPicture.asset(
-                  'lib/src/assets/images/iconamoon_profile-light.svg',
-                  height: 24,
-                  width: 24,
-                  colorFilter: ColorFilter.mode(
-                    _selectedIndex == 3 ? const Color(0xFF1F41BB) : Colors.grey.shade400,
-                    BlendMode.srcIn,
-                  ),
-                ),
-              ),
-              label: 'Profil',
-            ),
           ],
         ),
       ),
     );
   }
 
-
-
   Future<void> _markAsFound(Report report) async {
     try {
       // Note: Untuk implementasi yang lengkap, perlu mendapatkan matching ID dari API
-      // Sementara menggunakan placeholder
-      String matchingId = "matching-placeholder";
-      String idPenerima = "satpam-${DateTime.now().millisecondsSinceEpoch}";
-      
-      // Claim functionality removed
+      // Sementara menggunakan placeholder    
       
       _loadReports(); // Refresh the list
       ScaffoldMessenger.of(context).showSnackBar(
@@ -429,7 +370,37 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
     }
   }
 
-  void _showReportDetail(Report report) {
+  void _showReportDetail(Report report) async {
+    // Cek apakah laporan memiliki status 'cocok' dan ambil data cocok
+    Map<String, dynamic>? cocokData;
+    String? idLaporanCocok;
+    String? idPenerima;
+    
+    if (report.status.toLowerCase() == 'cocok') {
+      try {
+        cocokData = await _reportService.getCocokByReportId(report.id);
+        if (cocokData != null) {
+          idLaporanCocok = cocokData['id']?.toString();
+          // ID penerima adalah user yang membuat laporan hilang
+          if (report.jenisLaporan == 'hilang') {
+            idPenerima = report.userId.toString();
+          } else {
+            // Jika ini laporan temuan, ambil user ID dari laporan hilang yang dicocokkan
+            final idLaporanHilang = cocokData['id_laporan_hilang'];
+            if (idLaporanHilang != null) {
+              final laporanHilang = await _reportService.getReportById(idLaporanHilang);
+              idPenerima = laporanHilang?.userId.toString();
+            }
+          }
+        }
+      } catch (e) {
+        print('Error getting cocok data: $e');
+        // Reset values jika terjadi error
+        idLaporanCocok = null;
+        idPenerima = null;
+      }
+    }
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -438,7 +409,9 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
         report: report,
         showVerificationActions: false,
         onApprove: () => _markAsFound(report),
-        // Claim functionality removed
+        showClaimButton: true,
+        idLaporanCocok: idLaporanCocok,
+        idPenerima: idPenerima,
       ),
     );
   }
@@ -451,9 +424,5 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
     );
   }
 
-
-
   // Claim functionality removed
-
-
 }

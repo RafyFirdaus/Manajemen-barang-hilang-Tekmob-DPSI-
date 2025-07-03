@@ -32,8 +32,6 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
   final NotificationService _notificationService = NotificationService();
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
-  // ignore: unused_field
-  List<Report> _allReports = [];
   List<Report> _laporanHilang = [];
   List<Report> _laporanTemuan = [];
   List<Report> _filteredLaporanHilang = [];
@@ -96,10 +94,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
       final reports = await _reportService.getAllReports();
       if (mounted) {
         setState(() {
-          _allReports = reports;
-          // Filter laporan yang tidak berstatus 'Selesai' untuk dashboard user
-          _laporanHilang = reports.where((r) => r.jenisLaporan == 'hilang' && r.status != 'Selesai').toList();
-          _laporanTemuan = reports.where((r) => r.jenisLaporan == 'temuan' && r.status != 'Selesai').toList();
+          // Filter laporan yang tidak berstatus 'selesai' untuk dashboard user
+          _laporanHilang = reports.where((r) => r.jenisLaporan == 'hilang' && r.status != 'selesai').toList();
+          _laporanTemuan = reports.where((r) => r.jenisLaporan == 'temuan' && r.status != 'selesai').toList();
           _filterReports();
         });
         // Refresh notification count
@@ -335,12 +332,15 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
               width: 35,
             ),
             const SizedBox(width: 12),
-            Text(
-              'Manajemen Barang Hilang',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF1F41BB),
+            Expanded(
+              child: Text(
+                'Manajemen Barang Hilang',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1F41BB),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

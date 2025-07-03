@@ -40,9 +40,9 @@ class _MatchingScreenState extends State<MatchingScreen>
     try {
       final reports = await _reportService.getAllReports();
       setState(() {
-        // Exclude reports with status 'Selesai' and 'cocok' from matching screen
+        // Exclude reports with status 'selesai' and 'cocok' from matching screen
         _allReports = reports.where((report) => 
-          report.status != 'Selesai' && 
+          report.status != 'selesai' && 
           report.status.toLowerCase() != 'cocok'
         ).toList();
         _applyFilter();

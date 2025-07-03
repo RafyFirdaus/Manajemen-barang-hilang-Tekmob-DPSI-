@@ -4,12 +4,16 @@ import 'package:intl/intl.dart';
 import 'dart:convert';
 import '../models/report_model.dart';
 import 'fullscreen_image_viewer.dart';
+import '../screens/klaim/klaim_form_screen.dart';
 
 class ReportDetailModal extends StatelessWidget {
   final Report report;
   final bool showVerificationActions;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
+  final bool showClaimButton;
+  final String? idLaporanCocok;
+  final String? idPenerima;
 
   const ReportDetailModal({
     Key? key,
@@ -17,6 +21,9 @@ class ReportDetailModal extends StatelessWidget {
     this.showVerificationActions = false,
     this.onApprove,
     this.onReject,
+    this.showClaimButton = false,
+    this.idLaporanCocok,
+    this.idPenerima,
   }) : super(key: key);
 
   static void show({
@@ -25,6 +32,9 @@ class ReportDetailModal extends StatelessWidget {
     bool showVerificationActions = false,
     VoidCallback? onApprove,
     VoidCallback? onReject,
+    bool showClaimButton = false,
+    String? idLaporanCocok,
+    String? idPenerima,
   }) {
     showModalBottomSheet(
       context: context,
@@ -35,6 +45,9 @@ class ReportDetailModal extends StatelessWidget {
         showVerificationActions: showVerificationActions,
         onApprove: onApprove,
         onReject: onReject,
+        showClaimButton: showClaimButton,
+        idLaporanCocok: idLaporanCocok,
+        idPenerima: idPenerima,
       ),
     );
   }
@@ -346,6 +359,57 @@ class ReportDetailModal extends StatelessWidget {
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                  
+                  // Tombol Klaim Barang (hanya untuk satpam dan status cocok)
+                  if (showClaimButton && 
+                      report.status.toLowerCase() == 'cocok' && 
+                      idLaporanCocok != null && 
+                      idPenerima != null) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => KlaimFormScreen(
+                                matchedReport: report,
+                                idLaporanCocok: idLaporanCocok!,
+                                idPenerima: idPenerima!,
+                              ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1F41BB),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.assignment_turned_in,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Klaim Barang',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
