@@ -8,6 +8,7 @@ import 'fullscreen_image_viewer.dart';
 class ReportDetailModal extends StatelessWidget {
   final Report report;
   final bool showVerificationActions;
+  final bool showClaimButton;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
   final VoidCallback? onClaim;
@@ -16,6 +17,7 @@ class ReportDetailModal extends StatelessWidget {
     Key? key,
     required this.report,
     this.showVerificationActions = false,
+    this.showClaimButton = true,
     this.onApprove,
     this.onReject,
     this.onClaim,
@@ -25,6 +27,7 @@ class ReportDetailModal extends StatelessWidget {
     required BuildContext context,
     required Report report,
     bool showVerificationActions = false,
+    bool showClaimButton = true,
     VoidCallback? onApprove,
     VoidCallback? onReject,
     VoidCallback? onClaim,
@@ -36,6 +39,7 @@ class ReportDetailModal extends StatelessWidget {
       builder: (context) => ReportDetailModal(
         report: report,
         showVerificationActions: showVerificationActions,
+        showClaimButton: showClaimButton,
         onApprove: onApprove,
         onReject: onReject,
         onClaim: onClaim,
@@ -325,8 +329,8 @@ class ReportDetailModal extends StatelessWidget {
                   
                   const SizedBox(height: 20),
                   
-                  // Tombol Klaim Barang (hanya muncul jika status cocok)
-                  if (report.status.toLowerCase() == 'cocok') ...[
+                  // Tombol Klaim Barang (hanya muncul jika status cocok dan showClaimButton true)
+                  if (report.status.toLowerCase() == 'cocok' && showClaimButton) ...[
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(

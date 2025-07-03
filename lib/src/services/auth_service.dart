@@ -88,6 +88,7 @@ class AuthService {
   // Register method dengan integrasi API
   Future<Map<String, dynamic>> register({
     required String name,
+    required String username,
     required String email,
     required String password,
     required String phone,
@@ -123,7 +124,8 @@ class AuthService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'username': name,
+          'name': name,
+          'username': username,
           'email': email,
           'password': password,
           'phone': phone,

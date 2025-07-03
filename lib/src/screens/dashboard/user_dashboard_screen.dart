@@ -36,6 +36,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
   List<Report> _allReports = [];
   List<Report> _laporanHilang = [];
   List<Report> _laporanTemuan = [];
+  List<Report> _filteredLaporanHilang = [];
+  List<Report> _filteredLaporanTemuan = [];
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -97,6 +100,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
           // Filter laporan yang tidak berstatus 'Selesai' untuk dashboard user
           _laporanHilang = reports.where((r) => r.jenisLaporan == 'Laporan Kehilangan' && r.status != 'Selesai').toList();
           _laporanTemuan = reports.where((r) => r.jenisLaporan == 'Laporan Temuan' && r.status != 'Selesai').toList();
+          _filterReports();
         });
         // Refresh notification count
         _loadNotificationCount();
@@ -115,6 +119,27 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
         (route) => false,
       );
     }
+  }
+
+  void _filterReports() {
+    if (_searchQuery.isEmpty) {
+      _filteredLaporanHilang = List.from(_laporanHilang);
+      _filteredLaporanTemuan = List.from(_laporanTemuan);
+    } else {
+      _filteredLaporanHilang = _laporanHilang.where((report) {
+        return report.namaBarang.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+      _filteredLaporanTemuan = _laporanTemuan.where((report) {
+        return report.namaBarang.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+      _filterReports();
+    });
   }
 
   void _onItemTapped(int index) {
@@ -175,6 +200,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
           onFilterPressed: () {
             // Filter action
           },
+          onSearchChanged: _onSearchChanged,
         ),
         
         // Tab Bar View Content
@@ -193,17 +219,21 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
 
   Widget _buildLaporanHilangContent() {
     return ReportListView(
-      reports: _laporanHilang,
+      reports: _filteredLaporanHilang,
       onReportTap: _showReportDetail,
-      emptyMessage: 'Belum ada laporan barang hilang',
+      emptyMessage: _searchQuery.isEmpty 
+          ? 'Belum ada laporan barang hilang'
+          : 'Tidak ada laporan barang hilang yang sesuai dengan pencarian "$_searchQuery"',
     );
   }
 
   Widget _buildLaporanTemuanContent() {
     return ReportListView(
-      reports: _laporanTemuan,
+      reports: _filteredLaporanTemuan,
       onReportTap: _showReportDetail,
-      emptyMessage: 'Belum ada laporan barang temuan',
+      emptyMessage: _searchQuery.isEmpty 
+          ? 'Belum ada laporan barang temuan'
+          : 'Tidak ada laporan barang temuan yang sesuai dengan pencarian "$_searchQuery"',
     );
   }
 
@@ -214,6 +244,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
       context: context,
       report: report,
       showVerificationActions: false, // User dashboard doesn't need verification actions
+      showClaimButton: false, // User dashboard doesn't show claim button
     );
   }
   
@@ -288,7 +319,6 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
       _buildPlaceholderContent('Laporan'),
       _buildPlaceholderContent('Tambah Laporan'),
       _buildNotificationPlaceholder(),
-      _buildPlaceholderContent('Profil'),
     ];
 
     return Scaffold(
@@ -447,21 +477,6 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
                 ),
               ),
               label: 'Notifikasi',
-            ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: SvgPicture.asset(
-                  'lib/src/assets/images/iconamoon_profile-light.svg',
-                  height: 24,
-                  width: 24,
-                  colorFilter: ColorFilter.mode(
-                    _selectedIndex == 4 ? const Color(0xFF1F41BB) : Colors.grey.shade400,
-                    BlendMode.srcIn,
-                  ),
-                ),
-              ),
-              label: 'Profil',
             ),
           ],
         ),

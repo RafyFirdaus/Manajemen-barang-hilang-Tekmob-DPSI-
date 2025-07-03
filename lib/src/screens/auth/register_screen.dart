@@ -18,6 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   
   // Error messages
   String? _namaError;
+  String? _usernameError;
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
@@ -26,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   
   // Controllers for form fields
   final _namaController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -34,6 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   
   // Focus nodes to track field focus state
   final _namaFocus = FocusNode();
+  final _usernameFocus = FocusNode();
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
   final _confirmPasswordFocus = FocusNode();
@@ -48,6 +51,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.initState();
     // Add listeners to focus nodes
     _namaFocus.addListener(_onFocusChange);
+    _usernameFocus.addListener(_onFocusChange);
     _emailFocus.addListener(_onFocusChange);
     _passwordFocus.addListener(_onFocusChange);
     _confirmPasswordFocus.addListener(_onFocusChange);
@@ -59,6 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     // Dispose controllers
     _namaController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -67,6 +72,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     
     // Dispose focus nodes
     _namaFocus.dispose();
+    _usernameFocus.dispose();
     _emailFocus.dispose();
     _passwordFocus.dispose();
     _confirmPasswordFocus.dispose();
@@ -132,6 +138,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
                 
+                // Username
+                _buildTextField(
+                  controller: _usernameController,
+                  focusNode: _usernameFocus,
+                  hintText: 'Username',
+                  errorText: _usernameError,
+                ),
+                const SizedBox(height: 16),
+                
                 // Email
                 _buildTextField(
                   controller: _emailController,
@@ -151,7 +166,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   errorText: _passwordError,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                       color: Colors.grey,
                     ),
                     onPressed: () {
@@ -172,7 +187,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   errorText: _confirmPasswordError,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureConfirmText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      _obscureConfirmText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                       color: Colors.grey,
                     ),
                     onPressed: () {
@@ -191,14 +206,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   hintText: 'Nomor Telepon',
                   keyboardType: TextInputType.phone,
                   errorText: _teleponError,
-                ),
-                const SizedBox(height: 20),
-                
-                // Alamat Domisili
-                _buildTextField(
-                  controller: _alamatController,
-                  focusNode: _alamatFocus,
-                  hintText: 'Alamat Domisili',
                 ),
                 const SizedBox(height: 20),
                 
@@ -265,6 +272,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // Reset errors
     setState(() {
       _namaError = null;
+      _usernameError = null;
       _emailError = null;
       _passwordError = null;
       _confirmPasswordError = null;
@@ -286,6 +294,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } else if (nama.length < 2) {
       setState(() {
         _namaError = 'Nama minimal 2 karakter';
+      });
+      isValid = false;
+    }
+    
+    // Username validation
+    final username = _usernameController.text.trim();
+    if (username.isEmpty) {
+      setState(() {
+        _usernameError = 'Username tidak boleh kosong';
+      });
+      isValid = false;
+    } else if (username.length < 3) {
+      setState(() {
+        _usernameError = 'Username minimal 3 karakter';
+      });
+      isValid = false;
+    } else if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(username)) {
+      setState(() {
+        _usernameError = 'Username hanya boleh mengandung huruf, angka, dan underscore';
       });
       isValid = false;
     }
@@ -365,6 +392,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final result = await _authService.register(
         name: nama,
+        username: username,
         email: email,
         password: password,
         phone: phone,

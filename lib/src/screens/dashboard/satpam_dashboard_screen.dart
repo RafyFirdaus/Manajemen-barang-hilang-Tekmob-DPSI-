@@ -32,6 +32,9 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
   List<Report> _laporanHilang = [];
   List<Report> _laporanTemuan = [];
   List<Report> _laporanSelesai = [];
+  List<Report> _filteredLaporanHilang = [];
+  List<Report> _filteredLaporanTemuan = [];
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -83,6 +86,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
         _laporanTemuan = reports.where((report) => report.jenisLaporan == 'Laporan Temuan' && report.status != 'Selesai').toList();
         // Laporan selesai untuk halaman kelola
         _laporanSelesai = reports.where((report) => report.status == 'Selesai').toList();
+        _filterReports();
       });
     } catch (e) {
       print('Error loading reports: $e');
@@ -98,6 +102,27 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
         (route) => false,
       );
     }
+  }
+
+  void _filterReports() {
+    if (_searchQuery.isEmpty) {
+      _filteredLaporanHilang = List.from(_laporanHilang);
+      _filteredLaporanTemuan = List.from(_laporanTemuan);
+    } else {
+      _filteredLaporanHilang = _laporanHilang.where((report) {
+        return report.namaBarang.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+      _filteredLaporanTemuan = _laporanTemuan.where((report) {
+        return report.namaBarang.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+      _filterReports();
+    });
   }
 
   void _onItemTapped(int index) {
@@ -122,6 +147,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
           onFilterPressed: () {
             // Filter action
           },
+          onSearchChanged: _onSearchChanged,
         ),
         
         // Tab Bar View Content
@@ -140,17 +166,21 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
 
   Widget _buildLaporanHilangContent() {
     return ReportListView(
-      reports: _laporanHilang,
+      reports: _filteredLaporanHilang,
       onReportTap: _showReportDetail,
-      emptyMessage: 'Belum ada laporan barang hilang untuk diverifikasi',
+      emptyMessage: _searchQuery.isEmpty 
+          ? 'Belum ada laporan barang hilang untuk diverifikasi'
+          : 'Tidak ada laporan barang hilang yang sesuai dengan pencarian "$_searchQuery"',
     );
   }
 
   Widget _buildLaporanTemuanContent() {
     return ReportListView(
-      reports: _laporanTemuan,
+      reports: _filteredLaporanTemuan,
       onReportTap: _showReportDetail,
-      emptyMessage: 'Belum ada laporan barang temuan untuk diverifikasi',
+      emptyMessage: _searchQuery.isEmpty 
+          ? 'Belum ada laporan barang temuan untuk diverifikasi'
+          : 'Tidak ada laporan barang temuan yang sesuai dengan pencarian "$_searchQuery"',
     );
   }
 
