@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/report_model.dart';
 import '../models/kategori_model.dart';
@@ -28,7 +27,7 @@ class _AddReportScreenState extends State<AddReportScreen>
   final _lokasiController = TextEditingController();
   final _deskripsiController = TextEditingController();
   
-  String _jenisLaporan = 'Laporan Kehilangan';
+  String _jenisLaporan = 'hilang';
   DateTime? _tanggalKejadian;
   List<XFile> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
@@ -49,9 +48,21 @@ class _AddReportScreenState extends State<AddReportScreen>
   bool _isLoadingLokasi = false;
 
   final List<String> _jenisLaporanOptions = [
-    'Laporan Kehilangan',
-    'Laporan Temuan',
+    'hilang',
+    'temuan',
   ];
+
+  // Helper function to get display text for jenis laporan
+  String _getJenisLaporanDisplayText(String value) {
+    switch (value) {
+      case 'hilang':
+        return 'Laporan Kehilangan';
+      case 'temuan':
+        return 'Laporan Temuan';
+      default:
+        return value;
+    }
+  }
 
   @override
   void initState() {
@@ -278,20 +289,7 @@ class _AddReportScreenState extends State<AddReportScreen>
       final userData = await _authService.getUserData();
       final userId = userData['id'] ?? 'unknown';
       
-      // Convert XFile paths to base64 strings for storage
-      final fotoPaths = <String>[];
-      for (final file in _selectedImages) {
-        try {
-          final bytes = await file.readAsBytes();
-          final base64String = base64Encode(bytes);
-          fotoPaths.add('data:image/jpeg;base64,$base64String');
-        } catch (e) {
-          print('Error converting image to base64: $e');
-          // Skip this image if conversion fails
-        }
-      }
-      
-      // Create report object
+      // Create report object (tanpa foto paths karena akan diupload terpisah)
       final report = Report(
         id: reportId,
         jenisLaporan: _jenisLaporan,
@@ -301,14 +299,15 @@ class _AddReportScreenState extends State<AddReportScreen>
         lokasiId: _selectedLokasiId,
         tanggalKejadian: _tanggalKejadian!,
         deskripsi: _deskripsiController.text,
-        fotoPaths: fotoPaths,
+        fotoPaths: [], // Kosong karena foto akan diupload terpisah
         tanggalDibuat: DateTime.now(),
         status: 'Proses',
         userId: userId,
       );
       
-      // Save report
-      final success = await _reportService.saveReport(report);
+      // Save report dengan foto
+      print('Mengirim laporan dengan ${_selectedImages.length} foto...');
+      final success = await _reportService.saveReport(report, photos: _selectedImages);
       
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -439,7 +438,7 @@ class _AddReportScreenState extends State<AddReportScreen>
                     items: _jenisLaporanOptions.map((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
-                        child: Text(value),
+                        child: Text(_getJenisLaporanDisplayText(value)),
                       );
                     }).toList(),
                     onChanged: (String? newValue) {
@@ -563,9 +562,9 @@ class _AddReportScreenState extends State<AddReportScreen>
 
               // Lokasi Kehilangan/Penemuan (Dropdown)
               Text(
-                _jenisLaporan == 'Laporan Kehilangan' 
-                    ? 'Lokasi Kehilangan' 
-                    : 'Lokasi Penemuan',
+                _jenisLaporan == 'hilang'
+                      ? 'Lokasi Kehilangan'
+                      : 'Lokasi Penemuan',
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -599,9 +598,9 @@ class _AddReportScreenState extends State<AddReportScreen>
                         child: DropdownButton<String>(
                           value: _selectedLokasiId,
                           hint: Text(
-                            _jenisLaporan == 'Laporan Kehilangan'
+                            _jenisLaporan == 'hilang'
                                 ? 'Pilih lokasi kehilangan'
-                                : 'Pilih lokasi penemuan',
+                                 : 'Pilih lokasi penemuan',
                             style: GoogleFonts.poppins(
                               color: Colors.grey.shade500,
                               fontSize: 14,

@@ -33,9 +33,9 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
     // Filter laporan yang bisa dicocokkan
     // Jika laporan yang dipilih adalah kehilangan, tampilkan laporan temuan
     // Jika laporan yang dipilih adalah temuan, tampilkan laporan kehilangan
-    String targetType = widget.selectedReport.jenisLaporan == 'Laporan Kehilangan'
-        ? 'Laporan Temuan'
-        : 'Laporan Kehilangan';
+    String targetType = widget.selectedReport.jenisLaporan == 'hilang'
+         ? 'temuan'
+         : 'hilang';
 
     setState(() {
       _matchingCandidates = widget.allReports
@@ -126,32 +126,90 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
 
   Future<void> _performMatching(Report matchingReport) async {
     try {
-      // Match kedua laporan dan update status keduanya menjadi "Cocok"
-      await _reportService.matchReports(widget.selectedReport.id, matchingReport.id);
-
-      // TODO: Implementasi notifikasi akan ditambahkan nanti
-
-      // Tampilkan pesan sukses
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Laporan berhasil dicocokkan dan notifikasi telah dikirim!',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: Colors.green,
-        ),
+      // Tampilkan loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
       );
-
-      // Kembali ke halaman sebelumnya dengan hasil true
-      Navigator.of(context).pop(true);
+      
+      // Tentukan mana laporan hilang dan mana laporan temuan
+      String laporanHilangId;
+      String laporanTemuanId;
+      
+      if (widget.selectedReport.jenisLaporan == 'hilang') {
+        laporanHilangId = widget.selectedReport.id;
+        laporanTemuanId = matchingReport.id;
+      } else {
+        laporanHilangId = matchingReport.id;
+        laporanTemuanId = widget.selectedReport.id;
+      }
+      
+      // Match kedua laporan menggunakan API
+      final result = await _reportService.matchReports(
+        laporanHilangId, 
+        laporanTemuanId, 
+        skorCocok: 85.0 // Default score
+      );
+      
+      // Tutup loading indicator
+      Navigator.of(context).pop();
+      
+      if (result['success'] == true) {
+        // Tampilkan pesan sukses
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Laporan berhasil dicocokkan dan notifikasi telah dikirim!',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        
+        // Kembali ke halaman sebelumnya dengan hasil true
+        Navigator.of(context).pop(true);
+      } else {
+        // Tampilkan pesan error yang detail
+        String errorMessage = result['error'] ?? 'Gagal mencocokkan laporan';
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errorMessage,
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Tutup',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      }
     } catch (e) {
+      // Tutup loading indicator jika masih terbuka
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Gagal mencocokkan laporan: $e',
+            'Terjadi kesalahan: $e',
             style: GoogleFonts.poppins(),
           ),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
         ),
       );
     }
@@ -273,7 +331,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Belum ada laporan ${widget.selectedReport.jenisLaporan == 'Laporan Kehilangan' ? 'temuan' : 'kehilangan'} yang tersedia',
+                                  'Belum ada laporan ${widget.selectedReport.jenisLaporan == 'hilang' ? 'temuan' : 'kehilangan'} yang tersedia',
                                   style: GoogleFonts.poppins(
                                     fontSize: 12,
                                     color: Colors.grey.shade500,

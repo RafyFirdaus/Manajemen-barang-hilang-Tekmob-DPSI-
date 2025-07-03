@@ -66,6 +66,20 @@ class KategoriService {
     }
   }
 
+  // Get category by ID
+  Future<Kategori?> getKategoriById(String idKategori) async {
+    try {
+      final allKategori = await getAllKategori();
+      return allKategori.firstWhere(
+        (kategori) => kategori.idKategori == idKategori,
+        orElse: () => throw Exception('Category not found'),
+      );
+    } catch (e) {
+      print('Error getting category by ID: $e');
+      return null;
+    }
+  }
+
   // Delete category (admin only)
   Future<bool> deleteKategori(String idKategori) async {
     try {

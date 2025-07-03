@@ -54,10 +54,10 @@ class _UserReportsScreenState extends State<UserReportsScreen>
       if (mounted) {
         setState(() {
           _laporanHilang = reports
-              .where((r) => r.jenisLaporan == 'Laporan Kehilangan')
+              .where((r) => r.jenisLaporan == 'hilang')
               .toList();
           _laporanTemuan = reports
-              .where((r) => r.jenisLaporan == 'Laporan Temuan')
+              .where((r) => r.jenisLaporan == 'temuan')
               .toList();
           _isLoading = false;
         });

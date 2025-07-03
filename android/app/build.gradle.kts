@@ -13,18 +13,18 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
-       signingConfigs {
-        create("release") {
-            val keystorePropertiesFile = rootProject.file("key.properties")
-            val keystoreProperties = Properties()
-            keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    // signingConfigs {
+    //     create("release") {
+    //         val keystorePropertiesFile = rootProject.file("key.properties")
+    //         val keystoreProperties = Properties()
+    //         keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
-        }
-    }
+    //         keyAlias = keystoreProperties["keyAlias"] as String
+    //         keyPassword = keystoreProperties["keyPassword"] as String
+    //         storeFile = file(keystoreProperties["storeFile"] as String)
+    //         storePassword = keystoreProperties["storePassword"] as String
+    //     }
+    // }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -48,18 +48,11 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
-    // buildTypes {
-    //     release {
-    //         // TODO: Add your own signing config for the release build.
-    //         // Signing with the debug keys for now, so `flutter run --release` works.
-    //         signingConfig = signingConfigs.getByName("debug")
-    //     }
-    // }
 }
 
 flutter {

@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/report_model.dart';
+import '../services/kategori_service.dart';
+import '../services/lokasi_service.dart';
 import 'fullscreen_image_viewer.dart';
 
-class ReportDetailCard extends StatelessWidget {
+class ReportDetailCard extends StatefulWidget {
   final Report report;
   final bool showMatchButton;
   final VoidCallback? onMatchPressed;
@@ -15,6 +17,73 @@ class ReportDetailCard extends StatelessWidget {
     this.showMatchButton = false,
     this.onMatchPressed,
   }) : super(key: key);
+
+  @override
+  State<ReportDetailCard> createState() => _ReportDetailCardState();
+}
+
+class _ReportDetailCardState extends State<ReportDetailCard> {
+  final KategoriService _kategoriService = KategoriService();
+  final LokasiService _lokasiService = LokasiService();
+  
+  String? kategoriName;
+  String? lokasiName;
+  bool isLoadingKategori = false;
+  bool isLoadingLokasi = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadKategoriAndLokasi();
+  }
+
+  Future<void> _loadKategoriAndLokasi() async {
+    // Load kategori name if kategoriId exists
+    if (widget.report.kategoriId != null && widget.report.kategoriId!.isNotEmpty) {
+      setState(() {
+        isLoadingKategori = true;
+      });
+      
+      try {
+        final kategori = await _kategoriService.getKategoriById(widget.report.kategoriId!);
+        if (mounted) {
+          setState(() {
+            kategoriName = kategori?.namaKategori;
+            isLoadingKategori = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            isLoadingKategori = false;
+          });
+        }
+      }
+    }
+
+    // Load lokasi name if lokasiId exists
+    if (widget.report.lokasiId != null && widget.report.lokasiId!.isNotEmpty) {
+      setState(() {
+        isLoadingLokasi = true;
+      });
+      
+      try {
+        final lokasi = await _lokasiService.getLokasiById(widget.report.lokasiId!);
+        if (mounted) {
+          setState(() {
+            lokasiName = lokasi?.lokasiKlaim;
+            isLoadingLokasi = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            isLoadingLokasi = false;
+          });
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,21 +119,21 @@ class ReportDetailCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: report.jenisLaporan == 'Laporan Kehilangan'
-                        ? Colors.red.withOpacity(0.1)
-                        : Colors.green.withOpacity(0.1),
+                    color: widget.report.jenisLaporan == 'hilang' 
+                          ? Colors.red.withOpacity(0.1)
+                          : Colors.blue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    report.jenisLaporan == 'Laporan Kehilangan'
-                        ? 'Kehilangan'
-                        : 'Temuan',
+                    widget.report.jenisLaporan == 'hilang' 
+                          ? 'Barang Hilang'
+                          : 'Barang Temuan',
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: report.jenisLaporan == 'Laporan Kehilangan'
-                          ? Colors.red.shade700
-                          : Colors.green.shade700,
+                      color: widget.report.jenisLaporan == 'hilang' 
+                           ? Colors.red
+                           : Colors.blue,
                     ),
                   ),
                 ),
@@ -74,15 +143,15 @@ class ReportDetailCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(report.status).withOpacity(0.1),
+                    color: _getStatusColor(widget.report.status).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    report.status,
+                    widget.report.status,
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: _getStatusColor(report.status),
+                      color: _getStatusColor(widget.report.status),
                     ),
                   ),
                 ),
@@ -92,7 +161,7 @@ class ReportDetailCard extends StatelessWidget {
             
             // Nama barang
             Text(
-              report.namaBarang,
+              widget.report.namaBarang,
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -101,9 +170,43 @@ class ReportDetailCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             
+            // Kategori
+            if (widget.report.kategoriId != null && widget.report.kategoriId!.isNotEmpty)
+              Row(
+                children: [
+                  Icon(
+                    Icons.category_outlined,
+                    size: 16,
+                    color: Colors.grey.shade500,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: isLoadingKategori
+                        ? Text(
+                            'Memuat kategori...',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey.shade400,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          )
+                        : Text(
+                            kategoriName ?? 'Kategori tidak ditemukan',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                  ),
+                ],
+              ),
+            if (widget.report.kategoriId != null && widget.report.kategoriId!.isNotEmpty)
+              const SizedBox(height: 4),
+            
             // Deskripsi
             Text(
-              report.deskripsi,
+              widget.report.deskripsi,
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 color: Colors.grey.shade600,
@@ -114,7 +217,7 @@ class ReportDetailCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             
-            // Lokasi dan tanggal
+            // Lokasi kejadian
             Row(
               children: [
                 Icon(
@@ -125,7 +228,7 @@ class ReportDetailCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    report.lokasi,
+                    widget.report.lokasi,
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: Colors.grey.shade600,
@@ -136,6 +239,42 @@ class ReportDetailCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
+            
+            // Lokasi klaim
+            if (widget.report.lokasiId != null && widget.report.lokasiId!.isNotEmpty)
+              Row(
+                children: [
+                  Icon(
+                    Icons.store_outlined,
+                    size: 16,
+                    color: Colors.grey.shade500,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: isLoadingLokasi
+                        ? Text(
+                            'Memuat lokasi klaim...',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey.shade400,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          )
+                        : Text(
+                            lokasiName ?? 'Lokasi klaim tidak ditemukan',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                  ),
+                ],
+              ),
+            if (widget.report.lokasiId != null && widget.report.lokasiId!.isNotEmpty)
+              const SizedBox(height: 4),
+            
+            // Tanggal
             Row(
               children: [
                 Icon(
@@ -145,7 +284,7 @@ class ReportDetailCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  _formatDate(report.tanggalKejadian),
+                  _formatDate(widget.report.tanggalKejadian),
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: Colors.grey.shade600,
@@ -155,16 +294,16 @@ class ReportDetailCard extends StatelessWidget {
             ),
             
             // Foto jika ada
-            if (report.fotoPaths.isNotEmpty)
+            if (widget.report.fotoPaths.isNotEmpty)
               const SizedBox(height: 12),
-            if (report.fotoPaths.isNotEmpty)
+            if (widget.report.fotoPaths.isNotEmpty)
               GestureDetector(
                 onTap: () {
                   FullscreenImageViewer.show(
                     context: context,
-                    imagePath: report.fotoPaths.first,
+                    imagePath: widget.report.fotoPaths.first,
                     currentIndex: 0,
-                    allImages: report.fotoPaths,
+                    allImages: widget.report.fotoPaths,
                   );
                 },
                 child: Container(
@@ -178,7 +317,7 @@ class ReportDetailCard extends StatelessWidget {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: _buildImageWidget(report.fotoPaths.first),
+                        child: _buildImageWidget(widget.report.fotoPaths.first),
                       ),
                       // Overlay untuk menunjukkan bahwa foto dapat diklik
                       Positioned(
@@ -198,7 +337,7 @@ class ReportDetailCard extends StatelessWidget {
                         ),
                       ),
                       // Badge untuk multiple images
-                      if (report.fotoPaths.length > 1)
+                      if (widget.report.fotoPaths.length > 1)
                         Positioned(
                           bottom: 4,
                           right: 4,
@@ -212,7 +351,7 @@ class ReportDetailCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              '+${report.fotoPaths.length - 1}',
+                              '+${widget.report.fotoPaths.length - 1}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -227,13 +366,13 @@ class ReportDetailCard extends StatelessWidget {
               ),
             
             // Tombol cocok jika diperlukan
-            if (showMatchButton)
+            if (widget.showMatchButton)
               const SizedBox(height: 16),
-            if (showMatchButton)
+            if (widget.showMatchButton)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: onMatchPressed,
+                  onPressed: widget.onMatchPressed,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1F41BB),
                     foregroundColor: Colors.white,

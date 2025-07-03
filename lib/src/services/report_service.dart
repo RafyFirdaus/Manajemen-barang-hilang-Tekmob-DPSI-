@@ -1,162 +1,253 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http_parser/http_parser.dart';
 import '../models/report_model.dart';
+import '../models/notification_model.dart';
 import 'notification_service.dart';
+import 'matching_service.dart';
+
 
 class ReportService {
-  static const String _reportsKey = 'reports';
-  static const String baseUrl = 'https://api-manajemen-barang-hilang.vercel.app/api';
+  static const String baseUrl = 'https://api-manajemen-barang-hilang.vercel.app/api/laporan';
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  final NotificationService _notificationService = NotificationService();
+  final MatchingService _matchingService = MatchingService();
+  // Klaim service removed
 
-  // Simpan laporan baru ke API
-  Future<bool> saveReport(Report report) async {
+  // Upload foto ke API dan dapatkan URL
+  Future<List<String>> uploadPhotos(List<XFile> photos) async {
+    final List<String> uploadedUrls = [];
+    
     try {
-      // Simpan ke local storage sebagai backup
-      await _saveReportLocally(report);
-      
-      // Kirim ke API
       final token = await _secureStorage.read(key: 'auth_token');
+      
+      for (final photo in photos) {
+        var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/upload'));
+        
+        if (token != null) {
+          request.headers['Authorization'] = 'Bearer $token';
+        }
+        
+        // Tambahkan file foto
+        final bytes = await photo.readAsBytes();
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'foto',
+            bytes,
+            filename: photo.name,
+            contentType: MediaType('image', 'jpeg'),
+          ),
+        );
+        
+        final response = await request.send();
+        final responseBody = await response.stream.bytesToString();
+        
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final responseData = jsonDecode(responseBody);
+          if (responseData['url_foto'] != null) {
+            uploadedUrls.add(responseData['url_foto']);
+            print('Photo uploaded successfully: ${responseData['url_foto']}');
+          }
+        } else {
+          print('Error uploading photo: ${response.statusCode}');
+          print('Response: $responseBody');
+        }
+      }
+    } catch (e) {
+      print('Error uploading photos: $e');
+    }
+    
+    return uploadedUrls;
+  }
+  
+  // Simpan laporan baru ke API
+  Future<bool> saveReport(Report report, {List<XFile>? photos}) async {
+    try {
+      final token = await _secureStorage.read(key: 'auth_token');
+      
+      // Upload foto terlebih dahulu jika ada
+      List<String> photoUrls = [];
+      if (photos != null && photos.isNotEmpty) {
+        print('Uploading ${photos.length} photos...');
+        photoUrls = await uploadPhotos(photos);
+        print('Successfully uploaded ${photoUrls.length} photos');
+      }
+      
+      // Konversi data sesuai struktur API backend
+      final apiData = {
+        'id_kategori': report.kategoriId ?? 'kat-default',
+        'id_lokasi_klaim': report.lokasiId,
+        'lokasi_kejadian': report.lokasi,
+        'nama_barang': report.namaBarang,
+        'jenis_laporan': report.jenisLaporan,
+        'deskripsi': report.deskripsi,
+        // Gunakan URL foto yang sudah diupload
+        'url_foto': photoUrls,
+      };
+      
+      // Debug logging untuk memeriksa data yang dikirim
+      print('Saving report with ${photoUrls.length} photo URLs');
+      if (photoUrls.isNotEmpty) {
+        print('Photo URLs: ${photoUrls.join(", ")}');
+      }
+      
       final response = await http.post(
-        Uri.parse('$baseUrl/reports'),
+        Uri.parse(baseUrl),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
-        body: jsonEncode(report.toJson()),
+        body: jsonEncode(apiData),
       );
       
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+        print('Report saved successfully: ${responseData['message']}');
         return true;
       } else {
         print('Error saving report to API: ${response.statusCode}');
-        return true; // Return true karena sudah tersimpan di local
+        print('Response body: ${response.body}');
+        return false;
       }
     } catch (e) {
       print('Error saving report: $e');
-      // Tetap return true karena sudah tersimpan di local storage
-      return true;
-    }
-  }
-
-  // Simpan laporan ke local storage
-  Future<bool> _saveReportLocally(Report report) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final reports = await _getAllReportsLocally();
-      reports.add(report);
-      
-      final reportsJson = reports.map((r) => r.toJson()).toList();
-      await prefs.setString(_reportsKey, jsonEncode(reportsJson));
-      return true;
-    } catch (e) {
-      print('Error saving report locally: $e');
       return false;
     }
   }
 
-  // Ambil semua laporan dari API dengan fallback ke local
+
+
+  // Ambil semua laporan dari API
   Future<List<Report>> getAllReports() async {
     try {
-      final token = await _secureStorage.read(key: 'auth_token');
       final response = await http.get(
-        Uri.parse('$baseUrl/reports'),
+        Uri.parse(baseUrl),
         headers: {
           'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
         },
       );
       
       if (response.statusCode == 200) {
-        final List<dynamic> reportsJson = jsonDecode(response.body)['data'];
-        return reportsJson.map((json) => Report.fromJson(json)).toList();
+        final List<dynamic> reportsJson = jsonDecode(response.body);
+        final reports = reportsJson.map((json) => _convertApiToReport(json)).toList();
+        print('Successfully loaded ${reports.length} reports from API');
+        return reports;
       } else {
-        // Fallback ke local storage
-        return await _getAllReportsLocally();
+        print('Error getting reports from API: ${response.statusCode}');
+        return [];
       }
     } catch (e) {
       print('Error getting reports from API: $e');
-      // Fallback ke local storage
-      return await _getAllReportsLocally();
-    }
-  }
-
-  // Ambil semua laporan dari local storage
-  Future<List<Report>> _getAllReportsLocally() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final reportsString = prefs.getString(_reportsKey);
-      
-      if (reportsString == null) {
-        return [];
-      }
-      
-      final List<dynamic> reportsJson = jsonDecode(reportsString);
-      return reportsJson.map((json) => Report.fromJson(json)).toList();
-    } catch (e) {
-      print('Error getting reports locally: $e');
       return [];
     }
   }
 
+
+
+  // Konversi data dari API ke model Report
+  Report _convertApiToReport(Map<String, dynamic> apiData) {
+    // Konversi foto dengan penanganan berbagai format data
+    List<String> fotoPaths = [];
+    if (apiData['url_foto'] != null) {
+      if (apiData['url_foto'] is List) {
+        // Jika url_foto adalah array
+        fotoPaths = List<String>.from(apiData['url_foto']);
+      } else if (apiData['url_foto'] is String) {
+        // Jika url_foto adalah string tunggal
+        fotoPaths = [apiData['url_foto']];
+      }
+    }
+    
+    // Debug logging untuk memeriksa data foto
+    print('Converting report ${apiData['id_laporan']}: foto count = ${fotoPaths.length}');
+    if (fotoPaths.isNotEmpty) {
+      print('Photo URLs: ${fotoPaths.join(", ")}');
+    }
+    
+    return Report(
+      id: apiData['id_laporan'] ?? '',
+      jenisLaporan: apiData['jenis_laporan'] ?? '',
+      namaBarang: apiData['nama_barang'] ?? '',
+      lokasi: apiData['lokasi_kejadian'] ?? '',
+      kategoriId: apiData['id_kategori'],
+      lokasiId: apiData['id_lokasi_klaim'],
+      tanggalKejadian: apiData['waktu_laporan'] != null 
+          ? DateTime.fromMillisecondsSinceEpoch(apiData['waktu_laporan']['_seconds'] * 1000)
+          : DateTime.now(),
+      deskripsi: apiData['deskripsi'] ?? '',
+      fotoPaths: fotoPaths,
+      tanggalDibuat: apiData['waktu_laporan'] != null 
+          ? DateTime.fromMillisecondsSinceEpoch(apiData['waktu_laporan']['_seconds'] * 1000)
+          : DateTime.now(),
+      status: apiData['status'] ?? 'proses',
+      userId: apiData['id_user'] ?? '',
+      matchedReportId: null, // Akan dihandle terpisah jika ada
+    );
+  }
+
   // Ambil laporan berdasarkan jenis
   Future<List<Report>> getReportsByType(String jenisLaporan) async {
-    final allReports = await getAllReports();
-    return allReports.where((report) => report.jenisLaporan == jenisLaporan).toList();
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl?jenis_laporan=$jenisLaporan'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> reportsJson = jsonDecode(response.body);
+        final reports = reportsJson.map((json) => _convertApiToReport(json)).toList();
+        print('Successfully loaded ${reports.length} reports of type $jenisLaporan from API');
+        return reports;
+      } else {
+        print('Error getting reports by type from API: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Error getting reports by type from API: $e');
+      return [];
+    }
   }
 
   // Ambil laporan berdasarkan user ID
   Future<List<Report>> getReportsByUserId(String userId) async {
     try {
-      final token = await _secureStorage.read(key: 'auth_token');
-      final response = await http.get(
-        Uri.parse('$baseUrl/reports/user/$userId'),
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-      );
-      
-      if (response.statusCode == 200) {
-        final List<dynamic> reportsJson = jsonDecode(response.body)['data'];
-        return reportsJson.map((json) => Report.fromJson(json)).toList();
-      } else {
-        // Fallback ke local storage
-        final allReports = await _getAllReportsLocally();
-        return allReports.where((report) => report.userId == userId).toList();
-      }
+      // Karena API tidak memiliki endpoint khusus untuk user, ambil semua dan filter
+      final allReports = await getAllReports();
+      final userReports = allReports.where((report) => report.userId == userId).toList();
+      print('Successfully loaded ${userReports.length} reports for user $userId from API');
+      return userReports;
     } catch (e) {
-      print('Error getting reports by user ID from API: $e');
-      // Fallback ke local storage
-      final allReports = await _getAllReportsLocally();
-      return allReports.where((report) => report.userId == userId).toList();
+      print('Error getting reports by user ID: $e');
+      return [];
     }
   }
 
   // Hapus laporan
   Future<bool> deleteReport(String reportId) async {
     try {
-      // Hapus dari API
       final token = await _secureStorage.read(key: 'auth_token');
       final response = await http.delete(
-        Uri.parse('$baseUrl/reports/$reportId'),
+        Uri.parse('$baseUrl/$reportId'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
       );
       
-      // Hapus dari local storage juga
-      final prefs = await SharedPreferences.getInstance();
-      final reports = await _getAllReportsLocally();
-      reports.removeWhere((report) => report.id == reportId);
-      
-      final reportsJson = reports.map((r) => r.toJson()).toList();
-      await prefs.setString(_reportsKey, jsonEncode(reportsJson));
-      
-      return response.statusCode == 200 || response.statusCode == 204;
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('Report deleted successfully from API');
+        return true;
+      } else {
+        print('Error deleting report from API: ${response.statusCode}');
+        return false;
+      }
     } catch (e) {
+      print('Error deleting report: $e');
       return false;
     }
   }
@@ -164,253 +255,204 @@ class ReportService {
   // Update status laporan
   Future<bool> updateReportStatus(String reportId, String newStatus) async {
     try {
-      // Update di API
       final token = await _secureStorage.read(key: 'auth_token');
-      final response = await http.put(
-        Uri.parse('$baseUrl/reports/$reportId/status'),
+      
+      final response = await http.patch(
+        Uri.parse('$baseUrl/$reportId/status'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'status': newStatus}),
+        body: jsonEncode({
+          'status': newStatus,
+        }),
       );
       
-      // Update di local storage juga
-      final prefs = await SharedPreferences.getInstance();
-      final reports = await _getAllReportsLocally();
-      
-      final reportIndex = reports.indexWhere((report) => report.id == reportId);
-      if (reportIndex != -1) {
-        final oldReport = reports[reportIndex];
-        final oldStatus = oldReport.status;
-        
-        final updatedReport = Report(
-          id: oldReport.id,
-          jenisLaporan: oldReport.jenisLaporan,
-          namaBarang: oldReport.namaBarang,
-          lokasi: oldReport.lokasi,
-          tanggalKejadian: oldReport.tanggalKejadian,
-          deskripsi: oldReport.deskripsi,
-          fotoPaths: oldReport.fotoPaths,
-          tanggalDibuat: oldReport.tanggalDibuat,
-          status: newStatus,
-          userId: oldReport.userId,
-          matchedReportId: oldReport.matchedReportId,
-        );
-        
-        reports[reportIndex] = updatedReport;
-        
-        final reportsJson = reports.map((r) => r.toJson()).toList();
-        await prefs.setString(_reportsKey, jsonEncode(reportsJson));
-        
-        // Buat notifikasi jika status berubah dari 'Proses' ke 'Cocok'
-        if (oldStatus.toLowerCase() == 'proses' && newStatus.toLowerCase() == 'cocok') {
-          final notificationService = NotificationService();
-          await notificationService.createStatusChangeNotification(
-            userId: oldReport.userId,
-            reportId: reportId,
-            reportName: oldReport.namaBarang,
-            oldStatus: oldStatus,
-            newStatus: newStatus,
-          );
-        }
+      if (response.statusCode == 200) {
+        print('Report status updated successfully via API');
+        return true;
+      } else {
+        print('Error updating report status via API: ${response.statusCode}');
+        return false;
       }
-      
-      return response.statusCode == 200;
     } catch (e) {
       print('Error updating report status: $e');
       return false;
     }
   }
 
-  // Match dua laporan dan update status keduanya menjadi 'Cocok'
-  Future<bool> matchReports(String reportId1, String reportId2) async {
+  // Match dua laporan menggunakan API
+  Future<Map<String, dynamic>> matchReports(String laporanHilangId, String laporanTemuanId, {double skorCocok = 0}) async {
     try {
-      // Update di local storage
-      final prefs = await SharedPreferences.getInstance();
-      final reports = await _getAllReportsLocally();
+      // Gunakan MatchingService untuk membuat pencocokan
+      final result = await _matchingService.createMatching(
+        laporanHilangId, 
+        laporanTemuanId, 
+        skorCocok: skorCocok
+      );
       
-      final report1Index = reports.indexWhere((report) => report.id == reportId1);
-      final report2Index = reports.indexWhere((report) => report.id == reportId2);
-      
-      if (report1Index != -1 && report2Index != -1) {
-        final oldReport1 = reports[report1Index];
-        final oldReport2 = reports[report2Index];
+      if (result['success'] == true) {
+        // Ambil data laporan untuk notifikasi
+        final report1 = await getReportById(laporanHilangId);
+        final report2 = await getReportById(laporanTemuanId);
         
-        // Update kedua laporan dengan status 'Cocok' dan matchedReportId
-        final updatedReport1 = Report(
-          id: oldReport1.id,
-          jenisLaporan: oldReport1.jenisLaporan,
-          namaBarang: oldReport1.namaBarang,
-          lokasi: oldReport1.lokasi,
-          tanggalKejadian: oldReport1.tanggalKejadian,
-          deskripsi: oldReport1.deskripsi,
-          fotoPaths: oldReport1.fotoPaths,
-          tanggalDibuat: oldReport1.tanggalDibuat,
-          status: 'Cocok',
-          userId: oldReport1.userId,
-          matchedReportId: reportId2,
-        );
-        
-        final updatedReport2 = Report(
-          id: oldReport2.id,
-          jenisLaporan: oldReport2.jenisLaporan,
-          namaBarang: oldReport2.namaBarang,
-          lokasi: oldReport2.lokasi,
-          tanggalKejadian: oldReport2.tanggalKejadian,
-          deskripsi: oldReport2.deskripsi,
-          fotoPaths: oldReport2.fotoPaths,
-          tanggalDibuat: oldReport2.tanggalDibuat,
-          status: 'Cocok',
-          userId: oldReport2.userId,
-          matchedReportId: reportId1,
-        );
-        
-        reports[report1Index] = updatedReport1;
-        reports[report2Index] = updatedReport2;
-        
-        final reportsJson = reports.map((r) => r.toJson()).toList();
-        await prefs.setString(_reportsKey, jsonEncode(reportsJson));
-        
-        // Buat notifikasi untuk kedua user
-        final notificationService = NotificationService();
-        await notificationService.createStatusChangeNotification(
-          userId: oldReport1.userId,
-          reportId: reportId1,
-          reportName: oldReport1.namaBarang,
-          oldStatus: oldReport1.status,
-          newStatus: 'Cocok',
-        );
-        
-        await notificationService.createStatusChangeNotification(
-          userId: oldReport2.userId,
-          reportId: reportId2,
-          reportName: oldReport2.namaBarang,
-          oldStatus: oldReport2.status,
-          newStatus: 'Cocok',
-        );
-        
-        return true;
+        if (report1 != null && report2 != null) {
+          // Buat notifikasi untuk kedua user
+          final notification1 = NotificationModel(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            title: 'Laporan Dicocokkan',
+            message: 'Laporan ${report1.namaBarang} telah dicocokkan dengan laporan lain!',
+            reportId: report1.id,
+            reportName: report1.namaBarang,
+            oldStatus: 'proses',
+            newStatus: 'cocok',
+            createdAt: DateTime.now(),
+            isRead: false,
+            userId: report1.userId,
+          );
+          
+          final notification2 = NotificationModel(
+            id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
+            title: 'Laporan Dicocokkan',
+            message: 'Laporan ${report2.namaBarang} telah dicocokkan dengan laporan lain!',
+            reportId: report2.id,
+            reportName: report2.namaBarang,
+            oldStatus: 'proses',
+            newStatus: 'cocok',
+            createdAt: DateTime.now(),
+            isRead: false,
+            userId: report2.userId,
+          );
+          
+          await _notificationService.addNotification(notification1);
+          await _notificationService.addNotification(notification2);
+        }
       }
       
-      return false;
+      return result;
     } catch (e) {
       print('Error matching reports: $e');
-      return false;
+      return {
+        'success': false,
+        'error': 'Terjadi kesalahan saat mencocokkan laporan: $e'
+      };
     }
   }
   
-  // Klaim barang - update kedua laporan yang cocok menjadi 'Selesai'
-  Future<bool> claimMatchedReports(String reportId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final reports = await _getAllReportsLocally();
-      
-      final reportIndex = reports.indexWhere((report) => report.id == reportId);
-      if (reportIndex == -1) return false;
-      
-      final currentReport = reports[reportIndex];
-      final matchedReportId = currentReport.matchedReportId;
-      
-      if (matchedReportId == null) {
-        // Jika tidak ada matched report, hanya update laporan ini
-        return await updateReportStatus(reportId, 'Selesai');
-      }
-      
-      final matchedReportIndex = reports.indexWhere((report) => report.id == matchedReportId);
-      if (matchedReportIndex == -1) {
-        // Jika matched report tidak ditemukan, hanya update laporan ini
-        return await updateReportStatus(reportId, 'Selesai');
-      }
-      
-      // Update kedua laporan menjadi 'Selesai'
-      final oldReport1 = reports[reportIndex];
-      final oldReport2 = reports[matchedReportIndex];
-      
-      final updatedReport1 = Report(
-        id: oldReport1.id,
-        jenisLaporan: oldReport1.jenisLaporan,
-        namaBarang: oldReport1.namaBarang,
-        lokasi: oldReport1.lokasi,
-        tanggalKejadian: oldReport1.tanggalKejadian,
-        deskripsi: oldReport1.deskripsi,
-        fotoPaths: oldReport1.fotoPaths,
-        tanggalDibuat: oldReport1.tanggalDibuat,
-        status: 'Selesai',
-        userId: oldReport1.userId,
-        matchedReportId: oldReport1.matchedReportId,
-      );
-      
-      final updatedReport2 = Report(
-        id: oldReport2.id,
-        jenisLaporan: oldReport2.jenisLaporan,
-        namaBarang: oldReport2.namaBarang,
-        lokasi: oldReport2.lokasi,
-        tanggalKejadian: oldReport2.tanggalKejadian,
-        deskripsi: oldReport2.deskripsi,
-        fotoPaths: oldReport2.fotoPaths,
-        tanggalDibuat: oldReport2.tanggalDibuat,
-        status: 'Selesai',
-        userId: oldReport2.userId,
-        matchedReportId: oldReport2.matchedReportId,
-      );
-      
-      reports[reportIndex] = updatedReport1;
-      reports[matchedReportIndex] = updatedReport2;
-      
-      final reportsJson = reports.map((r) => r.toJson()).toList();
-      await prefs.setString(_reportsKey, jsonEncode(reportsJson));
-      
-      // Buat notifikasi untuk kedua user
-      final notificationService = NotificationService();
-      await notificationService.createStatusChangeNotification(
-        userId: oldReport1.userId,
-        reportId: oldReport1.id,
-        reportName: oldReport1.namaBarang,
-        oldStatus: 'Cocok',
-        newStatus: 'Selesai',
-      );
-      
-      await notificationService.createStatusChangeNotification(
-        userId: oldReport2.userId,
-        reportId: oldReport2.id,
-        reportName: oldReport2.namaBarang,
-        oldStatus: 'Cocok',
-        newStatus: 'Selesai',
-      );
-      
-      return true;
-    } catch (e) {
-      print('Error claiming matched reports: $e');
-      return false;
-    }
-  }
+  // Klaim functionality removed
 
   // Ambil laporan yang perlu diverifikasi (untuk satpam)
   Future<List<Report>> getReportsForVerification() async {
     try {
-      final token = await _secureStorage.read(key: 'auth_token');
       final response = await http.get(
-        Uri.parse('$baseUrl/reports/verification'),
+        Uri.parse('$baseUrl?status=proses'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> reportsJson = jsonDecode(response.body);
+        final reports = reportsJson.map((json) => _convertApiToReport(json)).toList();
+        print('Successfully loaded ${reports.length} reports for verification from API');
+        return reports;
+      } else {
+        print('Error getting reports for verification from API: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Error getting reports for verification: $e');
+      return [];
+    }
+  }
+
+  // Ambil laporan berdasarkan ID
+  Future<Report?> getReportById(String reportId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/$reportId'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+      
+      if (response.statusCode == 200) {
+        final reportJson = jsonDecode(response.body);
+        final report = _convertApiToReport(reportJson);
+        print('Successfully loaded report ${report.namaBarang} from API');
+        return report;
+      } else {
+        print('Error getting report by ID from API: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Error getting report by ID: $e');
+      return null;
+    }
+  }
+
+  // Ambil data cocok berdasarkan report ID
+  Future<Map<String, dynamic>?> getCocokByReportId(String reportId) async {
+    try {
+      const String cocokBaseUrl = 'https://api-manajemen-barang-hilang.vercel.app/api/cocok';
+      final token = await _secureStorage.read(key: 'auth_token');
+      
+      final response = await http.get(
+        Uri.parse(cocokBaseUrl),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
       );
       
+      print('Getting cocok data for report ID: $reportId');
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      
       if (response.statusCode == 200) {
-        final List<dynamic> reportsJson = jsonDecode(response.body)['data'];
-        return reportsJson.map((json) => Report.fromJson(json)).toList();
+        final responseData = jsonDecode(response.body);
+        List<dynamic> cocokList;
+        
+        // Handle different response formats
+        if (responseData is List) {
+          cocokList = responseData;
+        } else if (responseData is Map && responseData['data'] != null) {
+          cocokList = responseData['data'];
+        } else {
+          print('Unexpected response format: $responseData');
+          return null;
+        }
+        
+        print('Found ${cocokList.length} cocok records');
+        
+        // Cari data cocok yang mengandung reportId sebagai laporan hilang atau temuan
+        for (final cocok in cocokList) {
+          print('Checking cocok: $cocok');
+          if (cocok['id_laporan_hilang'] == reportId || cocok['id_laporan_temuan'] == reportId) {
+            // Berdasarkan API cocok.js, ID cocok disimpan sebagai document ID dan dikembalikan sebagai id_laporan_cocok
+            final cocokId = cocok['id_laporan_cocok'] ?? cocok['id'];
+            final result = {
+              'id': cocokId,
+              'id_laporan_hilang': cocok['id_laporan_hilang'],
+              'id_laporan_temuan': cocok['id_laporan_temuan'],
+              'skor_cocok': cocok['skor_cocok'] ?? 0,
+            };
+            print('Found matching cocok data: $result');
+            print('Using cocok ID: $cocokId');
+            return result;
+          }
+        }
+        
+        print('No matching cocok data found for report ID: $reportId');
+        return null;
       } else {
-        // Fallback: ambil laporan dengan status "Menunggu Verifikasi" dari local
-        final allReports = await _getAllReportsLocally();
-        return allReports.where((report) => report.status == 'Proses').toList();
+        print('Error getting cocok data from API: ${response.statusCode}');
+        print('Error response body: ${response.body}');
+        return null;
       }
     } catch (e) {
-      print('Error getting reports for verification: $e');
-      // Fallback ke local storage
-      final allReports = await _getAllReportsLocally();
-      return allReports.where((report) => report.status == 'Proses').toList();
+      print('Error getting cocok by report ID: $e');
+      return null;
     }
   }
 }

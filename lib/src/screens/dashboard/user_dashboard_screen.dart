@@ -98,8 +98,8 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
         setState(() {
           _allReports = reports;
           // Filter laporan yang tidak berstatus 'Selesai' untuk dashboard user
-          _laporanHilang = reports.where((r) => r.jenisLaporan == 'Laporan Kehilangan' && r.status != 'Selesai').toList();
-          _laporanTemuan = reports.where((r) => r.jenisLaporan == 'Laporan Temuan' && r.status != 'Selesai').toList();
+          _laporanHilang = reports.where((r) => r.jenisLaporan == 'hilang' && r.status != 'Selesai').toList();
+          _laporanTemuan = reports.where((r) => r.jenisLaporan == 'temuan' && r.status != 'Selesai').toList();
           _filterReports();
         });
         // Refresh notification count
@@ -244,7 +244,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
       context: context,
       report: report,
       showVerificationActions: false, // User dashboard doesn't need verification actions
-      showClaimButton: false, // User dashboard doesn't show claim button
+      // Claim functionality removed
     );
   }
   

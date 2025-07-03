@@ -8,29 +8,23 @@ import 'fullscreen_image_viewer.dart';
 class ReportDetailModal extends StatelessWidget {
   final Report report;
   final bool showVerificationActions;
-  final bool showClaimButton;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
-  final VoidCallback? onClaim;
 
   const ReportDetailModal({
     Key? key,
     required this.report,
     this.showVerificationActions = false,
-    this.showClaimButton = true,
     this.onApprove,
     this.onReject,
-    this.onClaim,
   }) : super(key: key);
 
   static void show({
     required BuildContext context,
     required Report report,
     bool showVerificationActions = false,
-    bool showClaimButton = true,
     VoidCallback? onApprove,
     VoidCallback? onReject,
-    VoidCallback? onClaim,
   }) {
     showModalBottomSheet(
       context: context,
@@ -39,10 +33,8 @@ class ReportDetailModal extends StatelessWidget {
       builder: (context) => ReportDetailModal(
         report: report,
         showVerificationActions: showVerificationActions,
-        showClaimButton: showClaimButton,
         onApprove: onApprove,
         onReject: onReject,
-        onClaim: onClaim,
       ),
     );
   }
@@ -272,7 +264,7 @@ class ReportDetailModal extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: report.jenisLaporan == 'Laporan Kehilangan' 
+                          color: report.jenisLaporan == 'hilang' 
                               ? Colors.red.withOpacity(0.1)
                               : Colors.blue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -282,7 +274,7 @@ class ReportDetailModal extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: report.jenisLaporan == 'Laporan Kehilangan' 
+                            color: report.jenisLaporan == 'hilang' 
                                 ? Colors.red.shade700
                                 : Colors.blue.shade700,
                           ),
@@ -329,34 +321,7 @@ class ReportDetailModal extends StatelessWidget {
                   
                   const SizedBox(height: 20),
                   
-                  // Tombol Klaim Barang (hanya muncul jika status cocok dan showClaimButton true)
-                  if (report.status.toLowerCase() == 'cocok' && showClaimButton) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          onClaim?.call();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1F41BB),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          'Klaim Barang',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
+
                   
                   // Action button untuk menandai ditemukan (hanya untuk satpam)
                   if (showVerificationActions) ...[

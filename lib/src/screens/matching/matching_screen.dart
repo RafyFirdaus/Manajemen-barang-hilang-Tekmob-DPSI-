@@ -62,11 +62,11 @@ class _MatchingScreenState extends State<MatchingScreen>
         _filteredReports = _allReports;
       } else if (_selectedFilter == 'Kehilangan') {
         _filteredReports = _allReports
-            .where((report) => report.jenisLaporan == 'Laporan Kehilangan')
+            .where((report) => report.jenisLaporan == 'hilang')
             .toList();
       } else if (_selectedFilter == 'Temuan') {
         _filteredReports = _allReports
-            .where((report) => report.jenisLaporan == 'Laporan Temuan')
+            .where((report) => report.jenisLaporan == 'temuan')
             .toList();
       }
     });

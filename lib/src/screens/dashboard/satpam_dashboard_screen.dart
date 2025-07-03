@@ -9,7 +9,7 @@ import '../../widgets/report_list_view.dart';
 import '../../widgets/report_detail_modal.dart';
 import '../auth/login_screen.dart';
 import '../matching/matching_screen.dart';
-import '../claim/claim_form_screen.dart';
+
 
 class SatpamDashboardScreen extends StatefulWidget {
   const SatpamDashboardScreen({Key? key}) : super(key: key);
@@ -82,8 +82,8 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       setState(() {
         _allReports = reports;
         // Filter laporan yang belum selesai untuk dashboard utama
-        _laporanHilang = reports.where((report) => report.jenisLaporan == 'Laporan Kehilangan' && report.status != 'Selesai').toList();
-        _laporanTemuan = reports.where((report) => report.jenisLaporan == 'Laporan Temuan' && report.status != 'Selesai').toList();
+        _laporanHilang = reports.where((report) => report.jenisLaporan == 'hilang' && report.status != 'Selesai').toList();
+         _laporanTemuan = reports.where((report) => report.jenisLaporan == 'temuan' && report.status != 'Selesai').toList();
         // Laporan selesai untuk halaman kelola
         _laporanSelesai = reports.where((report) => report.status == 'Selesai').toList();
         _filterReports();
@@ -405,8 +405,12 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
 
   Future<void> _markAsFound(Report report) async {
     try {
-      await _reportService.claimMatchedReports(report.id);
+      // Note: Untuk implementasi yang lengkap, perlu mendapatkan matching ID dari API
+      // Sementara menggunakan placeholder
+      String matchingId = "matching-placeholder";
+      String idPenerima = "satpam-${DateTime.now().millisecondsSinceEpoch}";
       
+      // Claim functionality removed
       
       _loadReports(); // Refresh the list
       ScaffoldMessenger.of(context).showSnackBar(
@@ -434,7 +438,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
         report: report,
         showVerificationActions: false,
         onApprove: () => _markAsFound(report),
-        onClaim: () => _navigateToClaimForm(report),
+        // Claim functionality removed
       ),
     );
   }
@@ -449,19 +453,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
 
 
 
-  Future<void> _navigateToClaimForm(Report report) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ClaimFormScreen(report: report),
-      ),
-    );
-    
-    // Jika form klaim berhasil disubmit, refresh data
-    if (result == true) {
-      _loadReports();
-    }
-  }
+  // Claim functionality removed
 
 
 }

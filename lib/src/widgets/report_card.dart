@@ -50,17 +50,17 @@ class ReportCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: report.jenisLaporan == 'Laporan Kehilangan' 
-                          ? Colors.red.shade100 
-                          : Colors.green.shade100,
+                      color: report.jenisLaporan == 'hilang' 
+                        ? Colors.red.shade100 
+                        : Colors.green.shade100,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      report.jenisLaporan == 'Laporan Kehilangan' 
-                          ? 'Barang Hilang' 
-                          : 'Barang Temuan',
+                      report.jenisLaporan == 'hilang' 
+                          ? 'Laporan Kehilangan' 
+                          : 'Laporan Temuan',
                       style: TextStyle(
-                        color: report.jenisLaporan == 'Laporan Kehilangan' 
+                        color: report.jenisLaporan == 'hilang' 
                             ? Colors.red.shade700 
                             : Colors.green.shade700,
                         fontSize: 12,

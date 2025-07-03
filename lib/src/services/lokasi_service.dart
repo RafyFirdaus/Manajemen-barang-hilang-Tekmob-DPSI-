@@ -89,6 +89,20 @@ class LokasiService {
     }
   }
 
+  // Get location by ID
+  Future<Lokasi?> getLokasiById(String idLokasi) async {
+    try {
+      final allLokasi = await getAllLokasi();
+      return allLokasi.firstWhere(
+        (lokasi) => lokasi.idLokasiKlaim == idLokasi,
+        orElse: () => throw Exception('Location not found'),
+      );
+    } catch (e) {
+      print('Error getting location by ID: $e');
+      return null;
+    }
+  }
+
   // Delete location (admin only)
   Future<bool> deleteLokasi(String idLokasi) async {
     try {

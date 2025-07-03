@@ -17,7 +17,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
   
   // Error messages
-  String? _namaError;
   String? _usernameError;
   String? _emailError;
   String? _passwordError;
@@ -129,15 +128,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 40),
                 
                 // Form fields
-                // Nama Lengkap
-                _buildTextField(
-                  controller: _namaController,
-                  focusNode: _namaFocus,
-                  hintText: 'Nama Lengkap',
-                  errorText: _namaError,
-                ),
-                const SizedBox(height: 16),
-                
                 // Username
                 _buildTextField(
                   controller: _usernameController,
@@ -271,7 +261,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _handleRegister() async {
     // Reset errors
     setState(() {
-      _namaError = null;
       _usernameError = null;
       _emailError = null;
       _passwordError = null;
@@ -283,20 +272,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     
     // Validate inputs
     bool isValid = true;
-    
-    // Name validation
-    final nama = _namaController.text.trim();
-    if (nama.isEmpty) {
-      setState(() {
-        _namaError = 'Nama tidak boleh kosong';
-      });
-      isValid = false;
-    } else if (nama.length < 2) {
-      setState(() {
-        _namaError = 'Nama minimal 2 karakter';
-      });
-      isValid = false;
-    }
     
     // Username validation
     final username = _usernameController.text.trim();
@@ -391,7 +366,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // Call auth service
     try {
       final result = await _authService.register(
-        name: nama,
+        name: username, // Menggunakan username sebagai nama
         username: username,
         email: email,
         password: password,
