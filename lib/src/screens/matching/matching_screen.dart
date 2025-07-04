@@ -191,13 +191,20 @@ class _MatchingScreenState extends State<MatchingScreen>
                       child: Text(
                         _selectedFilter,
                         style: GoogleFonts.poppins(
-                          fontSize: 12,
+                          fontSize: 10,
                           color: const Color(0xFF1F41BB),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
                   const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _loadReports,
+                    icon: Icon(
+                      Icons.refresh,
+                      color: const Color(0xFF1F41BB),
+                    ),
+                  ),
                   IconButton(
                     onPressed: _showFilterDialog,
                     icon: Icon(
@@ -212,10 +219,13 @@ class _MatchingScreenState extends State<MatchingScreen>
         ),
         // Report list
         Expanded(
-          child: ReportListView(
-            reports: _filteredReports,
-            onReportTap: _onReportTap,
-            emptyMessage: 'Belum ada laporan untuk dicocokkan',
+          child: RefreshIndicator(
+            onRefresh: _loadReports,
+            child: ReportListView(
+              reports: _filteredReports,
+              onReportTap: _onReportTap,
+              emptyMessage: 'Belum ada laporan untuk dicocokkan',
+            ),
           ),
         ),
       ],

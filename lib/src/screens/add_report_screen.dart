@@ -267,6 +267,28 @@ class _AddReportScreenState extends State<AddReportScreen>
       return;
     }
 
+    if (_selectedKategoriId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan pilih kategori barang'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedLokasiId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_jenisLaporan == 'hilang' 
+              ? 'Silakan pilih lokasi kehilangan' 
+              : 'Silakan pilih lokasi penemuan'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (_tanggalKejadian == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -289,7 +311,7 @@ class _AddReportScreenState extends State<AddReportScreen>
       final userData = await _authService.getUserData();
       final userId = userData['id'] ?? 'unknown';
       
-      // Create report object (tanpa foto paths karena akan diupload terpisah)
+      // Buat objek Report tanpa foto terlebih dahulu
       final report = Report(
         id: reportId,
         jenisLaporan: _jenisLaporan,
@@ -299,13 +321,13 @@ class _AddReportScreenState extends State<AddReportScreen>
         lokasiId: _selectedLokasiId,
         tanggalKejadian: _tanggalKejadian!,
         deskripsi: _deskripsiController.text,
-        fotoPaths: [], // Kosong karena foto akan diupload terpisah
+        fotoPaths: [], // Kosong karena foto akan diupload langsung di saveReport
         tanggalDibuat: DateTime.now(),
-        status: 'Proses',
+        status: 'proses',
         userId: userId,
       );
       
-      // Save report dengan foto
+      // Save report dengan foto yang akan diupload langsung
       print('Mengirim laporan dengan ${_selectedImages.length} foto...');
       final success = await _reportService.saveReport(report, photos: _selectedImages);
       
@@ -563,8 +585,8 @@ class _AddReportScreenState extends State<AddReportScreen>
               // Lokasi Kehilangan/Penemuan (Dropdown)
               Text(
                 _jenisLaporan == 'hilang'
-                      ? 'Lokasi Kehilangan'
-                      : 'Lokasi Penemuan',
+                      ? 'Lokasi Klaim'
+                      : 'Lokasi Klaim',
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -599,8 +621,8 @@ class _AddReportScreenState extends State<AddReportScreen>
                           value: _selectedLokasiId,
                           hint: Text(
                             _jenisLaporan == 'hilang'
-                                ? 'Pilih lokasi kehilangan'
-                                 : 'Pilih lokasi penemuan',
+                                ? 'Pilih lokasi klaim'
+                                 : 'Pilih lokasi klaim',
                             style: GoogleFonts.poppins(
                               color: Colors.grey.shade500,
                               fontSize: 14,
@@ -625,7 +647,53 @@ class _AddReportScreenState extends State<AddReportScreen>
                         ),
                       ),
               ),
-               const SizedBox(height: 20),
+              const SizedBox(height: 20),
+
+              // Lokasi Kejadian
+              Text(
+                'Lokasi Kejadian',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _lokasiController,
+                decoration: InputDecoration(
+                  hintText: _jenisLaporan == 'hilang'
+                      ? 'Masukkan lokasi kejadian kehilangan'
+                      : 'Masukkan lokasi kejadian penemuan',
+                  hintStyle: GoogleFonts.poppins(
+                    color: Colors.grey.shade500,
+                    fontSize: 14,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF1F41BB)),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Lokasi kejadian tidak boleh kosong';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
 
               // Tanggal Kejadian
               Text(

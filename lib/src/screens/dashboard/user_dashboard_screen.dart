@@ -194,9 +194,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
             'Laporan Barang Temuan',
           ],
           searchController: _searchController,
-          onFilterPressed: () {
-            // Filter action
-          },
+          onRefreshPressed: _loadReports,
           onSearchChanged: _onSearchChanged,
         ),
         
@@ -205,8 +203,14 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildLaporanHilangContent(),
-              _buildLaporanTemuanContent(),
+              RefreshIndicator(
+                onRefresh: _loadReports,
+                child: _buildLaporanHilangContent(),
+              ),
+              RefreshIndicator(
+                onRefresh: _loadReports,
+                child: _buildLaporanTemuanContent(),
+              ),
             ],
           ),
         ),

@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class DashboardSearchBar extends StatefulWidget {
   final TextEditingController controller;
-  final VoidCallback? onFilterPressed;
+  final VoidCallback? onRefreshPressed;
   final Function(String)? onSearchChanged;
   final String hintText;
 
   const DashboardSearchBar({
     Key? key,
     required this.controller,
-    this.onFilterPressed,
+    this.onRefreshPressed,
     this.onSearchChanged,
     this.hintText = 'Telusuri laporan',
   }) : super(key: key);
@@ -74,22 +73,18 @@ class _DashboardSearchBarState extends State<DashboardSearchBar> {
             ),
           ),
         ),
-         if (widget.onFilterPressed != null) ...[
+         if (widget.onRefreshPressed != null) ...[
            const SizedBox(width: 12),
            Container(
              decoration: BoxDecoration(
                borderRadius: BorderRadius.circular(12),
              ),
              child: IconButton(
-               onPressed: widget.onFilterPressed,
-               icon: SvgPicture.asset(
-                 'lib/src/assets/images/Frame 27.svg',
-                 width: 20,
-                 height: 20,
-                 colorFilter: const ColorFilter.mode(
-                   Colors.white,
-                   BlendMode.srcIn,
-                 ),
+               onPressed: widget.onRefreshPressed,
+               icon: const Icon(
+                 Icons.refresh,
+                 size: 24,
+                 color: Color(0xFF1F41BB),
                ),
              ),
            ),

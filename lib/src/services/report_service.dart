@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,99 +16,69 @@ class ReportService {
   final MatchingService _matchingService = MatchingService();
   // Klaim service removed
 
-  // Upload foto ke API dan dapatkan URL
-  Future<List<String>> uploadPhotos(List<XFile> photos) async {
-    final List<String> uploadedUrls = [];
-    
-    try {
-      final token = await _secureStorage.read(key: 'auth_token');
-      
-      for (final photo in photos) {
-        var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/upload'));
-        
-        if (token != null) {
-          request.headers['Authorization'] = 'Bearer $token';
-        }
-        
-        // Tambahkan file foto
-        final bytes = await photo.readAsBytes();
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'foto',
-            bytes,
-            filename: photo.name,
-            contentType: MediaType('image', 'jpeg'),
-          ),
-        );
-        
-        final response = await request.send();
-        final responseBody = await response.stream.bytesToString();
-        
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          final responseData = jsonDecode(responseBody);
-          if (responseData['url_foto'] != null) {
-            uploadedUrls.add(responseData['url_foto']);
-            print('Photo uploaded successfully: ${responseData['url_foto']}');
-          }
-        } else {
-          print('Error uploading photo: ${response.statusCode}');
-          print('Response: $responseBody');
-        }
-      }
-    } catch (e) {
-      print('Error uploading photos: $e');
-    }
-    
-    return uploadedUrls;
-  }
+  // Fungsi uploadPhotos dihapus karena foto sekarang diupload langsung dalam saveReport
   
   // Simpan laporan baru ke API
   Future<bool> saveReport(Report report, {List<XFile>? photos}) async {
     try {
       final token = await _secureStorage.read(key: 'auth_token');
       
-      // Upload foto terlebih dahulu jika ada
-      List<String> photoUrls = [];
-      if (photos != null && photos.isNotEmpty) {
-        print('Uploading ${photos.length} photos...');
-        photoUrls = await uploadPhotos(photos);
-        print('Successfully uploaded ${photoUrls.length} photos');
+      // Buat multipart request
+      var request = http.MultipartRequest('POST', Uri.parse(baseUrl));
+      
+      // Tambahkan header authorization jika ada token
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
       }
       
-      // Konversi data sesuai struktur API backend
-      final apiData = {
-        'id_kategori': report.kategoriId ?? 'kat-default',
-        'id_lokasi_klaim': report.lokasiId,
-        'lokasi_kejadian': report.lokasi,
-        'nama_barang': report.namaBarang,
-        'jenis_laporan': report.jenisLaporan,
-        'deskripsi': report.deskripsi,
-        // Gunakan URL foto yang sudah diupload
-        'url_foto': photoUrls,
-      };
+      // Tambahkan field data laporan
+      request.fields['id_kategori'] = report.kategoriId ?? 'kat-default';
+      if (report.lokasiId != null) {
+        request.fields['id_lokasi_klaim'] = report.lokasiId!;
+      }
+      request.fields['lokasi_kejadian'] = report.lokasi;
+      request.fields['nama_barang'] = report.namaBarang;
+      request.fields['jenis_laporan'] = report.jenisLaporan;
+      request.fields['deskripsi'] = report.deskripsi;
+      
+      // Tambahkan foto jika ada
+      if (photos != null && photos.isNotEmpty) {
+        print('Adding ${photos.length} photos to multipart request...');
+        for (int i = 0; i < photos.length && i < 3; i++) { // Maksimal 3 foto sesuai backend
+          final photo = photos[i];
+          final bytes = await photo.readAsBytes();
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'foto', // Nama field sesuai dengan backend
+              bytes,
+              filename: photo.name,
+              contentType: MediaType('image', 'jpeg'),
+            ),
+          );
+        }
+      } else if (report.fotoPaths.isNotEmpty) {
+        // Jika foto sudah diupload sebelumnya, kirim sebagai URL
+        print('Using existing photo URLs from report: ${report.fotoPaths.length} photos');
+        for (int i = 0; i < report.fotoPaths.length; i++) {
+          request.fields['url_foto[$i]'] = report.fotoPaths[i];
+        }
+      }
       
       // Debug logging untuk memeriksa data yang dikirim
-      print('Saving report with ${photoUrls.length} photo URLs');
-      if (photoUrls.isNotEmpty) {
-        print('Photo URLs: ${photoUrls.join(", ")}');
-      }
+      print('Sending multipart request with fields: ${request.fields}');
+      print('Number of files: ${request.files.length}');
       
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(apiData),
-      );
+      // Kirim request
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
       
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = jsonDecode(response.body);
+        final responseData = jsonDecode(responseBody);
         print('Report saved successfully: ${responseData['message']}');
         return true;
       } else {
         print('Error saving report to API: ${response.statusCode}');
-        print('Response body: ${response.body}');
+        print('Response body: $responseBody');
         return false;
       }
     } catch (e) {

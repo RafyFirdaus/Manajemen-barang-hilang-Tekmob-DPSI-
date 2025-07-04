@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/report_model.dart';
-import 'report_card.dart';
+import 'report_detail_card.dart';
 
 class ReportListView extends StatelessWidget {
   final List<Report> reports;
@@ -37,10 +37,12 @@ class ReportListView extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: reports.length,
       itemBuilder: (context, index) {
-        return ReportCard(
-          report: reports[index],
+        return GestureDetector(
           onTap: () => onReportTap(reports[index]),
-          showVerificationActions: showVerificationActions,
+          child: ReportDetailCard(
+            report: reports[index],
+            showMatchButton: false,
+          ),
         );
       },
     );

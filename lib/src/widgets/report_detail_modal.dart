@@ -3,10 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import '../models/report_model.dart';
+import '../services/kategori_service.dart';
+import '../services/lokasi_service.dart';
 import 'fullscreen_image_viewer.dart';
 import '../screens/klaim/klaim_form_screen.dart';
 
-class ReportDetailModal extends StatelessWidget {
+class ReportDetailModal extends StatefulWidget {
   final Report report;
   final bool showVerificationActions;
   final VoidCallback? onApprove;
@@ -25,6 +27,9 @@ class ReportDetailModal extends StatelessWidget {
     this.idLaporanCocok,
     this.idPenerima,
   }) : super(key: key);
+
+  @override
+  State<ReportDetailModal> createState() => _ReportDetailModalState();
 
   static void show({
     required BuildContext context,
@@ -52,13 +57,86 @@ class ReportDetailModal extends StatelessWidget {
     );
   }
 
+  static void showReportDetailModal({required BuildContext context, required Report report, required bool showVerificationActions}) {
+    show(
+      context: context,
+      report: report,
+      showVerificationActions: showVerificationActions,
+    );
+  }
+}
+
+class _ReportDetailModalState extends State<ReportDetailModal> {
+  final KategoriService _kategoriService = KategoriService();
+  final LokasiService _lokasiService = LokasiService();
+  
+  String? kategoriName;
+  String? lokasiName;
+  bool isLoadingKategori = false;
+  bool isLoadingLokasi = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadKategoriAndLokasi();
+  }
+
+  Future<void> _loadKategoriAndLokasi() async {
+    // Load kategori name if kategoriId exists
+    if (widget.report.kategoriId != null && widget.report.kategoriId!.isNotEmpty) {
+      setState(() {
+        isLoadingKategori = true;
+      });
+      
+      try {
+        final kategori = await _kategoriService.getKategoriById(widget.report.kategoriId!);
+        if (mounted) {
+          setState(() {
+            kategoriName = kategori?.namaKategori;
+            isLoadingKategori = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            isLoadingKategori = false;
+          });
+        }
+      }
+    }
+
+    // Load lokasi name if lokasiId exists
+    if (widget.report.lokasiId != null && widget.report.lokasiId!.isNotEmpty) {
+      setState(() {
+        isLoadingLokasi = true;
+      });
+      
+      try {
+        final lokasi = await _lokasiService.getLokasiById(widget.report.lokasiId!);
+        if (mounted) {
+          setState(() {
+            lokasiName = lokasi?.lokasiKlaim;
+            isLoadingLokasi = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            isLoadingLokasi = false;
+          });
+        }
+      }
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd MMM yyyy', 'id_ID');
     final timeFormat = DateFormat('HH:mm', 'id_ID');
     
     Color statusColor;
-    switch (report.status.toLowerCase()) {
+    switch (widget.report.status.toLowerCase()) {
       case 'proses':
         statusColor = Colors.orange;
         break;
@@ -128,9 +206,9 @@ class ReportDetailModal extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Foto barang jika ada (dipindah ke atas)
-                  if (report.fotoPaths.isNotEmpty) ...[
+                  if (widget.report.fotoPaths.isNotEmpty) ...[
                     Text(
-                      'Foto Barang (${report.fotoPaths.length}):',
+                      'Foto Barang (${widget.report.fotoPaths.length}):',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -142,16 +220,16 @@ class ReportDetailModal extends StatelessWidget {
                       height: 200,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
-                        itemCount: report.fotoPaths.length,
+                        itemCount: widget.report.fotoPaths.length,
                         itemBuilder: (context, index) {
                           return GestureDetector(
                             onTap: () {
-                              if (report.fotoPaths[index].isNotEmpty) {
+                              if (widget.report.fotoPaths[index].isNotEmpty) {
                                 FullscreenImageViewer.show(
                                   context: context,
-                                  imagePath: report.fotoPaths[index],
+                                  imagePath: widget.report.fotoPaths[index],
                                   currentIndex: index,
-                                  allImages: report.fotoPaths,
+                                  allImages: widget.report.fotoPaths,
                                 );
                               }
                             },
@@ -168,10 +246,10 @@ class ReportDetailModal extends StatelessWidget {
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: report.fotoPaths[index].isNotEmpty
+                                child: widget.report.fotoPaths[index].isNotEmpty
                                     ? Stack(
                                         children: [
-                                          _buildImageWidget(report.fotoPaths[index]),
+                                          _buildImageWidget(widget.report.fotoPaths[index]),
                                           // Overlay untuk menunjukkan bahwa foto dapat diklik
                                           Positioned(
                                             top: 8,
@@ -210,7 +288,7 @@ class ReportDetailModal extends StatelessWidget {
                   
                   // Nama barang
                   Text(
-                    report.namaBarang,
+                    widget.report.namaBarang,
                     style: GoogleFonts.poppins(
                       fontSize: 24,
                       fontWeight: FontWeight.w600,
@@ -223,17 +301,142 @@ class ReportDetailModal extends StatelessWidget {
                   // Tanggal kejadian
                   _buildDetailRow(
                     'Tanggal Kejadian:',
-                    dateFormat.format(report.tanggalKejadian),
+                    dateFormat.format(widget.report.tanggalKejadian),
                     Icons.calendar_today_outlined,
                   ),
                   
                   const SizedBox(height: 16),
                   
                   // Lokasi
-                  _buildDetailRow(
-                    'Lokasi:',
-                    report.lokasi,
-                    Icons.location_on_outlined,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.store_outlined,
+                        size: 20,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Lokasi:',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            if (widget.report.lokasiId != null && widget.report.lokasiId!.isNotEmpty)
+                              Text(
+                                isLoadingLokasi
+                                    ? 'Memuat lokasi...'
+                                    : (lokasiName ?? 'Lokasi tidak ditemukan'),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              )
+                            else
+                              Text(
+                                widget.report.lokasi,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Lokasi Kejadian
+                  if (widget.report.lokasi.isNotEmpty) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.place,
+                          size: 20,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(    
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Lokasi Kejadian:',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.report.lokasi.isNotEmpty
+                                    ? widget.report.lokasi
+                                    : 'Lokasi kejadian tidak tersedia',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // Kategori
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.category,
+                        size: 20,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Kategori:',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              isLoadingKategori
+                                  ? 'Memuat kategori...'
+                                  : (kategoriName ?? 'Kategori tidak ditemukan'),
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   
                   const SizedBox(height: 16),
@@ -260,7 +463,7 @@ class ReportDetailModal extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      report.deskripsi,
+                      widget.report.deskripsi,
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         color: Colors.grey.shade700,
@@ -277,17 +480,17 @@ class ReportDetailModal extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: report.jenisLaporan == 'hilang' 
+                          color: widget.report.jenisLaporan == 'hilang' 
                               ? Colors.red.withOpacity(0.1)
                               : Colors.blue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          report.jenisLaporan,
+                          widget.report.jenisLaporan,
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: report.jenisLaporan == 'hilang' 
+                            color: widget.report.jenisLaporan == 'hilang' 
                                 ? Colors.red.shade700
                                 : Colors.blue.shade700,
                           ),
@@ -301,7 +504,7 @@ class ReportDetailModal extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'Status: ${report.status}',
+                          'Status: ${widget.report.status}',
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -323,7 +526,7 @@ class ReportDetailModal extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'Dibuat: ${dateFormat.format(report.tanggalDibuat)} ${timeFormat.format(report.tanggalDibuat)}',
+                      'Dibuat: ${dateFormat.format(widget.report.tanggalDibuat)} ${timeFormat.format(widget.report.tanggalDibuat)}',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Colors.grey.shade600,
@@ -337,13 +540,13 @@ class ReportDetailModal extends StatelessWidget {
 
                   
                   // Action button untuk menandai ditemukan (hanya untuk satpam)
-                  if (showVerificationActions) ...[
+                  if (widget.showVerificationActions) ...[
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          onApprove?.call(); // Menggunakan onApprove untuk menghapus laporan
+                          widget.onApprove?.call(); // Menggunakan onApprove untuk menghapus laporan
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
@@ -366,10 +569,10 @@ class ReportDetailModal extends StatelessWidget {
                   ],
                   
                   // Tombol Klaim Barang (hanya untuk satpam dan status cocok)
-                  if (showClaimButton && 
-                      report.status.toLowerCase() == 'cocok' && 
-                      idLaporanCocok != null && 
-                      idPenerima != null) ...[
+                  if (widget.showClaimButton && 
+                      widget.report.status.toLowerCase() == 'cocok' && 
+                      widget.idLaporanCocok != null && 
+                      widget.idPenerima != null) ...[
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -379,9 +582,9 @@ class ReportDetailModal extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                               builder: (context) => KlaimFormScreen(
-                                matchedReport: report,
-                                idLaporanCocok: idLaporanCocok!,
-                                idPenerima: idPenerima!,
+                                matchedReport: widget.report,
+                                idLaporanCocok: widget.idLaporanCocok!,
+                                idPenerima: widget.idPenerima!,
                               ),
                             ),
                           );

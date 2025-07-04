@@ -138,9 +138,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
             'Laporan Barang Temuan',
           ],
           searchController: _searchController,
-          onFilterPressed: () {
-            // Filter action
-          },
+          onRefreshPressed: _loadReports,
           onSearchChanged: _onSearchChanged,
         ),
         
@@ -149,8 +147,14 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildLaporanHilangContent(),
-              _buildLaporanTemuanContent(),
+              RefreshIndicator(
+                onRefresh: _loadReports,
+                child: _buildLaporanHilangContent(),
+              ),
+              RefreshIndicator(
+                onRefresh: _loadReports,
+                child: _buildLaporanTemuanContent(),
+              ),
             ],
           ),
         ),
@@ -203,10 +207,13 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
           ),
         ),
         Expanded(
-          child: ReportListView(
-            reports: _laporanSelesai,
-            onReportTap: _showCompletedReportDetail,
-            emptyMessage: 'Belum ada laporan yang selesai',
+          child: RefreshIndicator(
+            onRefresh: _loadReports,
+            child: ReportListView(
+              reports: _laporanSelesai,
+              onReportTap: _showCompletedReportDetail,
+              emptyMessage: 'Belum ada laporan yang selesai',
+            ),
           ),
         ),
       ],
@@ -401,18 +408,14 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       }
     }
     
-    showModalBottomSheet(
+    ReportDetailModal.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => ReportDetailModal(
-        report: report,
-        showVerificationActions: false,
-        onApprove: () => _markAsFound(report),
-        showClaimButton: true,
-        idLaporanCocok: idLaporanCocok,
-        idPenerima: idPenerima,
-      ),
+      report: report,
+      showVerificationActions: false,
+      onApprove: () => _markAsFound(report),
+      showClaimButton: true,
+      idLaporanCocok: idLaporanCocok,
+      idPenerima: idPenerima,
     );
   }
 

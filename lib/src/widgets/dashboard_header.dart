@@ -8,7 +8,7 @@ class DashboardHeader extends StatelessWidget {
   final TabController tabController;
   final List<String> tabTitles;
   final TextEditingController searchController;
-  final VoidCallback? onFilterPressed;
+  final VoidCallback? onRefreshPressed;
   final Function(String)? onSearchChanged;
 
   const DashboardHeader({
@@ -17,7 +17,7 @@ class DashboardHeader extends StatelessWidget {
     required this.tabController,
     required this.tabTitles,
     required this.searchController,
-    this.onFilterPressed,
+    this.onRefreshPressed,
     this.onSearchChanged,
   }) : super(key: key);
 
@@ -46,7 +46,7 @@ class DashboardHeader extends StatelessWidget {
           const SizedBox(height: 20),
           DashboardSearchBar(
             controller: searchController,
-            onFilterPressed: onFilterPressed,
+            onRefreshPressed: onRefreshPressed,
             onSearchChanged: onSearchChanged,
           ),
         ],

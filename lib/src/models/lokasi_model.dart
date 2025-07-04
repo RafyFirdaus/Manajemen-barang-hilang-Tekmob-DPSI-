@@ -26,6 +26,15 @@ class Lokasi {
     try {
       if (dateValue is String) {
         return DateTime.parse(dateValue);
+      } else if (dateValue is Map<String, dynamic>) {
+        // Handle Firestore timestamp format
+        final seconds = dateValue['_seconds'];
+        final nanoseconds = dateValue['_nanoseconds'] ?? 0;
+        if (seconds != null) {
+          return DateTime.fromMillisecondsSinceEpoch(
+            (seconds * 1000) + (nanoseconds ~/ 1000000)
+          );
+        }
       }
       return null;
     } catch (e) {

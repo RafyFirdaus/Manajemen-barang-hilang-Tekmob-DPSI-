@@ -5,7 +5,7 @@ import '../../models/report_model.dart';
 import '../../services/report_service.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/report_detail_modal.dart';
-import 'package:intl/intl.dart';
+import '../../widgets/report_detail_card.dart';
 
 class UserReportsScreen extends StatefulWidget {
   const UserReportsScreen({Key? key}) : super(key: key);
@@ -77,7 +77,7 @@ class _UserReportsScreenState extends State<UserReportsScreen>
   }
 
   void _showReportDetail(Report report) {
-    ReportDetailModal.show(
+    ReportDetailModal.showReportDetailModal(
       context: context,
       report: report,
       showVerificationActions: false,
@@ -85,131 +85,19 @@ class _UserReportsScreenState extends State<UserReportsScreen>
   }
 
   Widget _buildReportCard(Report report) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
+      child: GestureDetector(
         onTap: () => _showReportDetail(report),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: report.jenisLaporan == 'Hilang'
-                          ? Colors.red.shade100
-                          : Colors.green.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      report.jenisLaporan,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: report.jenisLaporan == 'Hilang'
-                            ? Colors.red.shade700
-                            : Colors.green.shade700,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(report.status).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      report.status,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: _getStatusColor(report.status),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                report.namaBarang,
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on_outlined,
-                    size: 16,
-                    color: Colors.grey.shade600,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      report.lokasi,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: 16,
-                    color: Colors.grey.shade600,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    DateFormat('dd MMM yyyy').format(report.tanggalKejadian),
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+        child: ReportDetailCard(
+          report: report,
+          showMatchButton: false,
         ),
       ),
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'proses':
-        return Colors.orange;
-      case 'cocok':
-        return Colors.green;
-      case 'selesai':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
-  }
+
 
   Widget _buildTabContent(List<Report> reports, String emptyMessage) {
     if (reports.isEmpty) {

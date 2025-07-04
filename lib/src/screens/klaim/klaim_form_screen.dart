@@ -462,7 +462,7 @@ class _KlaimFormScreenState extends State<KlaimFormScreen> {
                     
                     // Lokasi Kehilangan
                     Text(
-                      'Lokasi Kehilangan',
+                      'Lokasi Klaim',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -496,7 +496,7 @@ class _KlaimFormScreenState extends State<KlaimFormScreen> {
                               child: DropdownButton<String>(
                                 value: _selectedLokasiId,
                                 hint: Text(
-                                  'Pilih lokasi kehilangan',
+                                  'Pilih lokasi klaim',
                                   style: GoogleFonts.poppins(
                                     color: Colors.grey.shade500,
                                     fontSize: 14,

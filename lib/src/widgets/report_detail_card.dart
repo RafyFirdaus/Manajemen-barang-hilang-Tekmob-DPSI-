@@ -217,30 +217,7 @@ class _ReportDetailCardState extends State<ReportDetailCard> {
             ),
             const SizedBox(height: 12),
             
-            // Lokasi kejadian
-            Row(
-              children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 16,
-                  color: Colors.grey.shade500,
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    widget.report.lokasi,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            
-            // Lokasi klaim
+            // Lokasi
             if (widget.report.lokasiId != null && widget.report.lokasiId!.isNotEmpty)
               Row(
                 children: [
@@ -253,7 +230,7 @@ class _ReportDetailCardState extends State<ReportDetailCard> {
                   Expanded(
                     child: isLoadingLokasi
                         ? Text(
-                            'Memuat lokasi klaim...',
+                            'Memuat lokasi...',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               color: Colors.grey.shade400,
@@ -261,7 +238,7 @@ class _ReportDetailCardState extends State<ReportDetailCard> {
                             ),
                           )
                         : Text(
-                            lokasiName ?? 'Lokasi klaim tidak ditemukan',
+                            lokasiName ?? 'Lokasi tidak ditemukan',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               color: Colors.grey.shade600,
@@ -270,9 +247,65 @@ class _ReportDetailCardState extends State<ReportDetailCard> {
                           ),
                   ),
                 ],
+              )
+            else
+              Row(
+                children: [
+                  Icon(
+                    Icons.store_outlined,
+                    size: 16,
+                    color: Colors.grey.shade500,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      widget.report.lokasi,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-            if (widget.report.lokasiId != null && widget.report.lokasiId!.isNotEmpty)
-              const SizedBox(height: 4),
+            const SizedBox(height: 8),
+            
+            // Lokasi Kejadian
+            Row(
+              children: [
+                Icon(
+                  Icons.place,
+                  size: 16,
+                  color: Colors.grey.shade600,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Lokasi Kejadian:',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 24),
+              child: Text(
+                widget.report.lokasi.isNotEmpty 
+                    ? widget.report.lokasi 
+                    : 'Lokasi kejadian tidak tersedia',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
             
             // Tanggal
             Row(
@@ -410,6 +443,8 @@ class _ReportDetailCardState extends State<ReportDetailCard> {
     switch (status.toLowerCase()) {
       case 'proses':
         return Colors.orange;
+      case 'cocok':
+        return Colors.green;
       case 'selesai':
         return Colors.green;
       case 'ditolak':
