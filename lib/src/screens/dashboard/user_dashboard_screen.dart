@@ -5,6 +5,7 @@ import '../auth/login_screen.dart';
 import '../add_report_screen.dart';
 import '../reports/user_reports_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../profile/profile_screen.dart';
 import '../../models/report_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/report_service.dart';
@@ -140,44 +141,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
   }
 
   void _onItemTapped(int index) {
-    if (index == 1) {
-      // Navigate to User Reports Screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const UserReportsScreen(),
-        ),
-      ).then((_) {
-        // Refresh reports when returning from reports screen
-        _loadReports();
-      });
-    } else if (index == 2) {
-      // Navigate to Add Report Screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const AddReportScreen(),
-        ),
-      ).then((_) {
-        // Refresh reports when returning from add report screen
-        _loadReports();
-      });
-    } else if (index == 3) {
-      // Navigate to Notifications Screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const NotificationsScreen(),
-        ),
-      ).then((_) {
-        // Refresh notification count when returning
-        _loadNotificationCount();
-      });
-    } else {
-      setState(() {
-        _selectedIndex = index;
-      });
-    }
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
 
@@ -251,57 +217,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
   
 
 
-  Widget _buildPlaceholderContent(String title) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.construction,
-            size: 80,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            '$title Coming Soon',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildNotificationPlaceholder() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SvgPicture.asset(
-            'lib/src/assets/images/mingcute_notification-line.svg',
-            height: 80,
-            width: 80,
-            colorFilter: ColorFilter.mode(
-              Colors.grey.shade400,
-              BlendMode.srcIn,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Fitur ini sedang dikembangkan',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
 
 
@@ -317,9 +233,10 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
 
     final List<Widget> pages = [
       _buildHomeContent(),
-      _buildPlaceholderContent('Laporan'),
-      _buildPlaceholderContent('Tambah Laporan'),
-      _buildNotificationPlaceholder(),
+      const UserReportsScreen(),
+      const AddReportScreen(),
+      const NotificationsScreen(),
+      const ProfileScreen(role: 'user'),
     ];
 
     return Scaffold(
@@ -481,6 +398,17 @@ class _UserDashboardScreenState extends State<UserDashboardScreen>
                 ),
               ),
               label: 'Notifikasi',
+            ),
+            BottomNavigationBarItem(
+              icon: Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Icon(
+                  Icons.person_outline,
+                  size: 24,
+                  color: _selectedIndex == 4 ? const Color(0xFF1F41BB) : Colors.grey.shade400,
+                ),
+              ),
+              label: 'Profile',
             ),
           ],
         ),

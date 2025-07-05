@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/report_model.dart';
+import '../../models/klaim_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/report_service.dart';
+import '../../services/klaim_service.dart';
 import '../../widgets/dashboard_header.dart';
 import '../../widgets/report_list_view.dart';
 import '../../widgets/report_detail_modal.dart';
 import '../auth/login_screen.dart';
 import '../matching/matching_screen.dart';
+import '../profile/profile_screen.dart';
 
 class SatpamDashboardScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -19,17 +22,21 @@ class SatpamDashboardScreen extends StatefulWidget {
 }
 
 class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   int _selectedIndex = 0;
   String _username = '';
   bool _isLoading = true;
   final AuthService _authService = AuthService();
   final ReportService _reportService = ReportService();
+  final KlaimService _klaimService = KlaimService();
   late TabController _tabController;
+  late TabController _riwayatTabController;
   final TextEditingController _searchController = TextEditingController();
   List<Report> _laporanHilang = [];
   List<Report> _laporanTemuan = [];
   List<Report> _laporanSelesai = [];
+  List<Report> _laporanSelesaiHilang = [];
+  List<Report> _laporanSelesaiTemuan = [];
   List<Report> _filteredLaporanHilang = [];
   List<Report> _filteredLaporanTemuan = [];
   String _searchQuery = '';
@@ -39,6 +46,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
     super.initState();
     _selectedIndex = widget.initialTabIndex;
     _tabController = TabController(length: 2, vsync: this);
+    _riwayatTabController = TabController(length: 2, vsync: this);
     _loadUserData();
     _loadReports();
   }
@@ -46,6 +54,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _riwayatTabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -82,6 +91,8 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
          _laporanTemuan = reports.where((report) => report.jenisLaporan == 'temuan' && report.status != 'selesai').toList();
         // Laporan selesai untuk halaman kelola
         _laporanSelesai = reports.where((report) => report.status == 'selesai').toList();
+        _laporanSelesaiHilang = _laporanSelesai.where((report) => report.jenisLaporan == 'hilang').toList();
+        _laporanSelesaiTemuan = _laporanSelesai.where((report) => report.jenisLaporan == 'temuan').toList();
         _filterReports();
       });
     } catch (e) {
@@ -206,14 +217,61 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
             ],
           ),
         ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _loadReports,
-            child: ReportListView(
-              reports: _laporanSelesai,
-              onReportTap: _showCompletedReportDetail,
-              emptyMessage: 'Belum ada laporan yang selesai',
+        // Tab Bar untuk Riwayat Selesai
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: TabBar(
+            controller: _riwayatTabController,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.grey.shade600,
+            indicator: BoxDecoration(
+              color: const Color(0xFF1F41BB),
+              borderRadius: BorderRadius.circular(12),
             ),
+            labelStyle: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            unselectedLabelStyle: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+            tabs: [
+              Tab(
+                text: 'Barang Hilang (${_laporanSelesaiHilang.length})',
+              ),
+              Tab(
+                text: 'Barang Temuan (${_laporanSelesaiTemuan.length})',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: TabBarView(
+            controller: _riwayatTabController,
+            children: [
+              RefreshIndicator(
+                onRefresh: _loadReports,
+                child: ReportListView(
+                  reports: _laporanSelesaiHilang,
+                  onReportTap: _showCompletedReportDetail,
+                  emptyMessage: 'Belum ada laporan barang hilang yang selesai',
+                ),
+              ),
+              RefreshIndicator(
+                onRefresh: _loadReports,
+                child: ReportListView(
+                  reports: _laporanSelesaiTemuan,
+                  onReportTap: _showCompletedReportDetail,
+                  emptyMessage: 'Belum ada laporan barang temuan yang selesai',
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -234,6 +292,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       _buildHomeContent(),
       _buildKelolaContent(),
       MatchingScreen(onReportsUpdated: _loadReports),
+      const ProfileScreen(role: 'satpam'),
     ];
 
     return Scaffold(
@@ -349,6 +408,17 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
               ),
               label: 'Pencocokan',
             ),
+            BottomNavigationBarItem(
+              icon: Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Icon(
+                  Icons.person_outline,
+                  size: 24,
+                  color: _selectedIndex == 3 ? const Color(0xFF1F41BB) : Colors.grey.shade400,
+                ),
+              ),
+              label: 'Profile',
+            ),
           ],
         ),
       ),
@@ -419,13 +489,53 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
     );
   }
 
-  void _showCompletedReportDetail(Report report) {
+  void _showCompletedReportDetail(Report report) async {
+    // Ambil data klaim untuk laporan selesai
+    Klaim? klaimData;
+    String? namaSatpam;
+    
+    try {
+      // Cari klaim berdasarkan laporan cocok yang terkait dengan laporan ini
+      final cocokData = await _reportService.getCocokByReportId(report.id);
+      if (cocokData != null) {
+        final idLaporanCocok = cocokData['id']?.toString();
+        if (idLaporanCocok != null) {
+          // Ambil semua klaim dan cari yang sesuai dengan id_laporan_cocok
+          final klaimResponse = await _klaimService.getAllKlaim();
+          if (klaimResponse['success'] == true) {
+            final List<dynamic> klaimList = klaimResponse['data'] ?? [];
+            final klaimJson = klaimList.firstWhere(
+              (k) => k['id_laporan_cocok'] == idLaporanCocok,
+              orElse: () => null,
+            );
+            
+            if (klaimJson != null) {
+              klaimData = Klaim.fromJson(klaimJson);
+              
+              // Ambil nama satpam
+              try {
+                final satpamData = await _authService.getUserById(klaimData.idSatpam);
+                namaSatpam = satpamData?['username'] ?? 'Satpam';
+              } catch (e) {
+                namaSatpam = 'Satpam';
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error getting klaim data: $e');
+    }
+    
     ReportDetailModal.show(
       context: context,
       report: report,
       showVerificationActions: false, // Laporan selesai tidak perlu tombol verifikasi
+      klaimData: klaimData,
+      namaSatpam: namaSatpam,
     );
   }
 
   // Claim functionality removed
+
 }

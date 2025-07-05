@@ -147,13 +147,7 @@ class _UserReportsScreenState extends State<UserReportsScreen>
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(
-            Icons.arrow_back_ios,
-            color: Color(0xFF1F41BB),
-          ),
-        ),
+
         title: Text(
           'Riwayat Laporan Saya',
           style: GoogleFonts.poppins(

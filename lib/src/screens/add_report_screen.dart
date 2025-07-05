@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/report_model.dart';
 import '../models/kategori_model.dart';
@@ -36,7 +37,7 @@ class _AddReportScreenState extends State<AddReportScreen>
   final AuthService _authService = AuthService();
   final KategoriService _kategoriService = KategoriService();
   final LokasiService _lokasiService = LokasiService();
-  late TabController _tabController;
+  TabController? _tabController;
   String _userRole = '';
   
   // New fields for kategori and lokasi
@@ -46,6 +47,37 @@ class _AddReportScreenState extends State<AddReportScreen>
   String? _selectedLokasiId;
   bool _isLoadingKategori = false;
   bool _isLoadingLokasi = false;
+  
+  // Safe reference untuk ScaffoldMessenger
+  ScaffoldMessengerState? _scaffoldMessenger;
+  
+  // Method untuk mendapatkan default lokasi klaim
+  String? _getDefaultLokasiKlaim() {
+    if (_jenisLaporan == 'hilang') {
+      // Pilih lokasi pertama dari list sebagai default
+      if (_lokasiList.isNotEmpty) {
+        return _lokasiList.first.idLokasiKlaim;
+      } else {
+        // Fallback ke ID default jika list kosong
+        return 'default_location_id';
+      }
+    }
+    return _selectedLokasiId;
+  }
+
+  void _onJenisLaporanChanged(String? newValue) {
+    if (newValue != null) {
+      setState(() {
+        _jenisLaporan = newValue;
+        // Auto-select default lokasi untuk laporan hilang
+        if (newValue == 'hilang') {
+          _selectedLokasiId = _getDefaultLokasiKlaim();
+        } else {
+          _selectedLokasiId = null;
+        }
+      });
+    }
+  }
 
   final List<String> _jenisLaporanOptions = [
     'hilang',
@@ -65,80 +97,173 @@ class _AddReportScreenState extends State<AddReportScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Simpan referensi yang aman untuk ScaffoldMessenger
+    _scaffoldMessenger = ScaffoldMessenger.of(context);
+  }
+
+  @override
   void initState() {
     super.initState();
-    _loadUserRole();
-    _loadKategoriData();
-    _loadLokasiData();
+    
+    // Inisialisasi TabController dengan default value untuk mencegah crash
+    _tabController = TabController(length: 1, vsync: this);
+    
+    // Error handling untuk mencegah crash - tanpa setState
+    FlutterError.onError = (FlutterErrorDetails details) {
+      print('Flutter Error: ${details.exception}');
+      // Tidak menggunakan setState di sini untuk menghindari crash
+      _isLoading = false;
+    };
+    
+    // Gunakan scheduleMicrotask untuk semua operasi async
+    scheduleMicrotask(() {
+      _loadUserRole();
+      _loadKategoriData();
+      _loadLokasiData();
+      
+      // Set default lokasi untuk jenis laporan default (hilang)
+      if (_jenisLaporan == 'hilang' && mounted) {
+        setState(() {
+          _selectedLokasiId = _getDefaultLokasiKlaim();
+        });
+      }
+    });
   }
 
   Future<void> _loadUserRole() async {
     try {
       final userData = await _authService.getUserData();
-      setState(() {
-        _userRole = userData['role'] ?? '';
-        // Set TabController length based on role
-        _tabController = TabController(
-          length: _userRole == 'satpam' ? 2 : 1, 
-          vsync: this
-        );
-      });
+      final newRole = userData['role'] ?? '';
+      final newLength = newRole == 'satpam' ? 2 : 1;
+      
+      if (mounted) {
+        // Dispose TabController lama di luar setState
+        final oldController = _tabController;
+        final newController = TabController(length: newLength, vsync: this);
+        
+        scheduleMicrotask(() {
+          if (mounted) {
+            setState(() {
+              _userRole = newRole;
+              _tabController = newController;
+            });
+            // Dispose controller lama setelah setState selesai
+            oldController?.dispose();
+          } else {
+            // Jika widget sudah tidak mounted, dispose controller baru
+            newController.dispose();
+          }
+        });
+      }
     } catch (e) {
-      setState(() {
-        _userRole = '';
-        _tabController = TabController(length: 1, vsync: this);
-      });
+      if (mounted) {
+        // Dispose TabController lama di luar setState
+        final oldController = _tabController;
+        final newController = TabController(length: 1, vsync: this);
+        
+        scheduleMicrotask(() {
+          if (mounted) {
+            setState(() {
+              _userRole = '';
+              _tabController = newController;
+            });
+            // Dispose controller lama setelah setState selesai
+            oldController?.dispose();
+          } else {
+            // Jika widget sudah tidak mounted, dispose controller baru
+            newController.dispose();
+          }
+        });
+      }
     }
   }
 
   Future<void> _loadKategoriData() async {
-    setState(() {
-      _isLoadingKategori = true;
-    });
+    if (mounted) {
+      scheduleMicrotask(() {
+        if (mounted) {
+          setState(() {
+            _isLoadingKategori = true;
+          });
+        }
+      });
+    }
     
     try {
       final kategoriList = await _kategoriService.getAllKategori();
-      setState(() {
-        _kategoriList = kategoriList;
-        _isLoadingKategori = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingKategori = false;
-      });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memuat data kategori: $e'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        scheduleMicrotask(() {
+          if (mounted) {
+            setState(() {
+              _kategoriList = kategoriList;
+              _isLoadingKategori = false;
+            });
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        scheduleMicrotask(() {
+          if (mounted) {
+            setState(() {
+              _isLoadingKategori = false;
+            });
+            _scaffoldMessenger?.showSnackBar(
+              SnackBar(
+                content: Text('Gagal memuat data kategori: $e'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        });
       }
     }
   }
 
   Future<void> _loadLokasiData() async {
-    setState(() {
-      _isLoadingLokasi = true;
-    });
+    if (mounted) {
+      scheduleMicrotask(() {
+        if (mounted) {
+          setState(() {
+            _isLoadingLokasi = true;
+          });
+        }
+      });
+    }
     
     try {
       final lokasiList = await _lokasiService.getAllLokasi();
-      setState(() {
-        _lokasiList = lokasiList;
-        _isLoadingLokasi = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingLokasi = false;
-      });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memuat data lokasi: $e'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        scheduleMicrotask(() {
+          if (mounted) {
+            setState(() {
+              _lokasiList = lokasiList;
+              _isLoadingLokasi = false;
+              // Set default lokasi setelah data dimuat jika jenis laporan adalah hilang
+              if (_jenisLaporan == 'hilang' && _selectedLokasiId == null) {
+                _selectedLokasiId = _getDefaultLokasiKlaim();
+              }
+            });
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        scheduleMicrotask(() {
+          if (mounted) {
+            setState(() {
+              _isLoadingLokasi = false;
+            });
+            _scaffoldMessenger?.showSnackBar(
+              SnackBar(
+                content: Text('Gagal memuat data lokasi: $e'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        });
       }
     }
   }
@@ -148,7 +273,8 @@ class _AddReportScreenState extends State<AddReportScreen>
     _namaBarangController.dispose();
     _lokasiController.dispose();
     _deskripsiController.dispose();
-    _tabController.dispose();
+    // Dispose TabController dengan null safety
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -172,9 +298,13 @@ class _AddReportScreenState extends State<AddReportScreen>
         );
       },
     );
-    if (picked != null && picked != _tanggalKejadian) {
-      setState(() {
-        _tanggalKejadian = picked;
+    if (picked != null && picked != _tanggalKejadian && mounted) {
+      scheduleMicrotask(() {
+        if (mounted) {
+          setState(() {
+            _tanggalKejadian = picked;
+          });
+        }
       });
     }
   }
@@ -215,19 +345,27 @@ class _AddReportScreenState extends State<AddReportScreen>
         imageQuality: 80,
       );
       
-      if (images.isNotEmpty) {
-        setState(() {
-          _selectedImages.addAll(images);
+      if (images.isNotEmpty && mounted) {
+        scheduleMicrotask(() {
+          if (mounted) {
+            setState(() {
+              _selectedImages.addAll(images);
+            });
+          }
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memilih gambar dari galeri: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        scheduleMicrotask(() {
+          if (mounted) {
+            _scaffoldMessenger?.showSnackBar(
+              SnackBar(
+                content: Text('Gagal memilih gambar dari galeri: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        });
       }
     }
   }
@@ -239,27 +377,61 @@ class _AddReportScreenState extends State<AddReportScreen>
         imageQuality: 80,
       );
       
-      if (image != null) {
-        setState(() {
-          _selectedImages.add(image);
+      if (image != null && mounted) {
+        scheduleMicrotask(() {
+          if (mounted) {
+            setState(() {
+              _selectedImages.add(image);
+            });
+          }
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal mengambil foto: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        scheduleMicrotask(() {
+          if (mounted) {
+            _scaffoldMessenger?.showSnackBar(
+              SnackBar(
+                content: Text('Gagal mengambil foto: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        });
       }
     }
   }
 
   void _removeImage(int index) {
-    setState(() {
-      _selectedImages.removeAt(index);
-    });
+    if (mounted) {
+      scheduleMicrotask(() {
+        if (mounted) {
+          setState(() {
+            _selectedImages.removeAt(index);
+          });
+        }
+      });
+    }
+  }
+
+  void _resetForm() {
+    if (mounted) {
+      scheduleMicrotask(() {
+        if (mounted) {
+          setState(() {
+            // Reset semua field form
+            _namaBarangController.clear();
+            _lokasiController.clear();
+            _deskripsiController.clear();
+            _jenisLaporan = 'hilang';
+            _tanggalKejadian = null;
+            _selectedImages.clear();
+            _selectedKategoriId = null;
+            _selectedLokasiId = _jenisLaporan == 'hilang' ? _getDefaultLokasiKlaim() : null;
+          });
+        }
+      });
+    }
   }
 
   Future<void> _submitReport() async {
@@ -268,7 +440,7 @@ class _AddReportScreenState extends State<AddReportScreen>
     }
 
     if (_selectedKategoriId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _scaffoldMessenger?.showSnackBar(
         const SnackBar(
           content: Text('Silakan pilih kategori barang'),
           backgroundColor: Colors.red,
@@ -277,20 +449,24 @@ class _AddReportScreenState extends State<AddReportScreen>
       return;
     }
 
-    if (_selectedLokasiId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_jenisLaporan == 'hilang' 
-              ? 'Silakan pilih lokasi kehilangan' 
-              : 'Silakan pilih lokasi penemuan'),
+    // Validasi lokasi klaim hanya untuk laporan temuan
+    if (_jenisLaporan == 'temuan' && _selectedLokasiId == null) {
+      _scaffoldMessenger?.showSnackBar(
+        const SnackBar(
+          content: Text('Silakan pilih lokasi klaim untuk laporan temuan'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
+    
+    // Pastikan laporan hilang memiliki lokasi default
+    if (_jenisLaporan == 'hilang' && _selectedLokasiId == null) {
+      _selectedLokasiId = _getDefaultLokasiKlaim();
+    }
 
     if (_tanggalKejadian == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _scaffoldMessenger?.showSnackBar(
         const SnackBar(
           content: Text('Silakan pilih tanggal kejadian'),
           backgroundColor: Colors.red,
@@ -299,16 +475,29 @@ class _AddReportScreenState extends State<AddReportScreen>
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
-
+    if (!mounted) return;
+    
     try {
+      // Set loading state dengan scheduleMicrotask
+      scheduleMicrotask(() {
+        if (mounted) {
+          setState(() {
+            _isLoading = true;
+          });
+        }
+      });
+      
+      // Pastikan UI ter-render sebelum melanjutkan
+      await Future.delayed(const Duration(milliseconds: 100));
+      
       // Generate unique ID for report
       final reportId = 'RPT_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(1000)}';
       
-      // Get current user info
-      final userData = await _authService.getUserData();
+      // Get current user info dengan timeout
+      final userData = await _authService.getUserData().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('Timeout getting user data', const Duration(seconds: 10)),
+      );
       final userId = userData['id'] ?? 'unknown';
       
       // Buat objek Report tanpa foto terlebih dahulu
@@ -318,7 +507,8 @@ class _AddReportScreenState extends State<AddReportScreen>
         namaBarang: _namaBarangController.text,
         lokasi: _lokasiController.text,
         kategoriId: _selectedKategoriId,
-        lokasiId: _selectedLokasiId,
+        // Set lokasiId: untuk temuan gunakan pilihan user, untuk hilang gunakan default
+        lokasiId: _jenisLaporan == 'temuan' ? _selectedLokasiId : _getDefaultLokasiKlaim(),
         tanggalKejadian: _tanggalKejadian!,
         deskripsi: _deskripsiController.text,
         fotoPaths: [], // Kosong karena foto akan diupload langsung di saveReport
@@ -327,34 +517,73 @@ class _AddReportScreenState extends State<AddReportScreen>
         userId: userId,
       );
       
-      // Save report dengan foto yang akan diupload langsung
-      print('Mengirim laporan dengan ${_selectedImages.length} foto...');
-      final success = await _reportService.saveReport(report, photos: _selectedImages);
+      // Save report dengan foto yang akan diupload langsung dengan timeout
+      final success = await _reportService.saveReport(report, photos: _selectedImages).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          return false;
+        },
+      );
       
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return;
+      
+      // Reset loading state dengan scheduleMicrotask
+      scheduleMicrotask(() {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      });
+      
+      if (success) {
+        // Reset form setelah berhasil submit
+        _resetForm();
+        
+        // Tampilkan success message
+        _scaffoldMessenger?.showSnackBar(
           SnackBar(
             content: Text('$_jenisLaporan berhasil dikirim'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
           ),
         );
-        Navigator.pop(context, true); // Return true to indicate success
-      } else if (mounted) {
-        throw Exception('Gagal menyimpan laporan');
+        
+        // Tidak melakukan Navigator.pop karena screen ini adalah bagian dari IndexedStack
+        // User akan tetap di screen yang sama dan bisa membuat laporan baru
+      } else {
+        throw Exception('Gagal menyimpan laporan - Server tidak merespons');
+      }
+    } on TimeoutException {
+      if (mounted) {
+        scheduleMicrotask(() {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+            _scaffoldMessenger?.showSnackBar(
+              const SnackBar(
+                content: Text('Koneksi timeout. Silakan coba lagi.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal mengirim laporan: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
+        scheduleMicrotask(() {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+            _scaffoldMessenger?.showSnackBar(
+              SnackBar(
+                content: Text('Gagal mengirim laporan: ${e.toString()}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         });
       }
     }
@@ -367,23 +596,8 @@ class _AddReportScreenState extends State<AddReportScreen>
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.black87,
-          ),
-        ),
-        title: Text(
-          'Manajemen Laporan',
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        centerTitle: true,
-        bottom: _userRole.isNotEmpty ? TabBar(
+        toolbarHeight: 0,
+        bottom: _userRole.isNotEmpty && _tabController != null ? TabBar(
           controller: _tabController,
           labelColor: const Color(0xFF1F41BB),
           unselectedLabelColor: Colors.grey.shade600,
@@ -406,21 +620,73 @@ class _AddReportScreenState extends State<AddReportScreen>
               ],
         ) : null,
       ),
-      body: _userRole.isNotEmpty 
-        ? TabBarView(
-            controller: _tabController,
-            children: _userRole == 'satpam'
-              ? [
-                  _buildAddReportTab(),
-                  _buildMatchingTab(),
-                ]
-              : [
-                  _buildAddReportTab(),
-                ],
-          )
-        : const Center(
-            child: CircularProgressIndicator(),
-          ),
+      body: Stack(
+        children: [
+          // Pastikan TabController sudah diinisialisasi
+          _tabController != null 
+            ? TabBarView(
+                controller: _tabController,
+                children: _userRole == 'satpam'
+                  ? [
+                      _buildAddReportTab(),
+                      _buildMatchingTab(),
+                    ]
+                  : [
+                      _buildAddReportTab(),
+                    ],
+              )
+            : const Center(
+                child: CircularProgressIndicator(),
+              ),
+          // Loading overlay yang diperbaiki
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1F41BB)),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Mengirim laporan...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Mohon tunggu sebentar',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -463,13 +729,7 @@ class _AddReportScreenState extends State<AddReportScreen>
                         child: Text(_getJenisLaporanDisplayText(value)),
                       );
                     }).toList(),
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          _jenisLaporan = newValue;
-                        });
-                      }
-                    },
+                    onChanged: _onJenisLaporanChanged,
                   ),
                 ),
               ),
@@ -582,72 +842,70 @@ class _AddReportScreenState extends State<AddReportScreen>
               ),
               const SizedBox(height: 20),
 
-              // Lokasi Kehilangan/Penemuan (Dropdown)
-              Text(
-                _jenisLaporan == 'hilang'
-                      ? 'Lokasi Klaim'
-                      : 'Lokasi Klaim',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+              // Lokasi Klaim (hanya untuk laporan temuan)
+              if (_jenisLaporan == 'temuan') ...[
+                Text(
+                  'Lokasi Klaim',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: _isLoadingLokasi
-                    ? const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: _isLoadingLokasi
+                      ? const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              SizedBox(width: 12),
+                              Text('Memuat lokasi...'),
+                            ],
+                          ),
+                        )
+                      : DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedLokasiId,
+                            hint: Text(
+                              'Pilih lokasi klaim',
+                              style: GoogleFonts.poppins(
+                                color: Colors.grey.shade500,
+                                fontSize: 14,
+                              ),
                             ),
-                            SizedBox(width: 12),
-                            Text('Memuat lokasi...'),
-                          ],
-                        ),
-                      )
-                    : DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedLokasiId,
-                          hint: Text(
-                            _jenisLaporan == 'hilang'
-                                ? 'Pilih lokasi klaim'
-                                 : 'Pilih lokasi klaim',
+                            isExpanded: true,
                             style: GoogleFonts.poppins(
-                              color: Colors.grey.shade500,
                               fontSize: 14,
+                              color: Colors.black87,
                             ),
+                            items: _lokasiList.map((Lokasi lokasi) {
+                              return DropdownMenuItem<String>(
+                                value: lokasi.idLokasiKlaim,
+                                child: Text(lokasi.lokasiKlaim),
+                              );
+                            }).toList(),
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _selectedLokasiId = newValue;
+                              });
+                            },
                           ),
-                          isExpanded: true,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                          items: _lokasiList.map((Lokasi lokasi) {
-                            return DropdownMenuItem<String>(
-                              value: lokasi.idLokasiKlaim,
-                              child: Text(lokasi.lokasiKlaim),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              _selectedLokasiId = newValue;
-                            });
-                          },
                         ),
-                      ),
-              ),
-              const SizedBox(height: 20),
+                ),
+                const SizedBox(height: 20),
+              ],
 
               // Lokasi Kejadian
               Text(

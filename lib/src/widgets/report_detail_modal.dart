@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import '../models/report_model.dart';
+import '../models/klaim_model.dart';
 import '../services/kategori_service.dart';
 import '../services/lokasi_service.dart';
 import 'fullscreen_image_viewer.dart';
@@ -16,6 +17,8 @@ class ReportDetailModal extends StatefulWidget {
   final bool showClaimButton;
   final String? idLaporanCocok;
   final String? idPenerima;
+  final Klaim? klaimData;
+  final String? namaSatpam;
 
   const ReportDetailModal({
     Key? key,
@@ -26,6 +29,8 @@ class ReportDetailModal extends StatefulWidget {
     this.showClaimButton = false,
     this.idLaporanCocok,
     this.idPenerima,
+    this.klaimData,
+    this.namaSatpam,
   }) : super(key: key);
 
   @override
@@ -40,6 +45,8 @@ class ReportDetailModal extends StatefulWidget {
     bool showClaimButton = false,
     String? idLaporanCocok,
     String? idPenerima,
+    Klaim? klaimData,
+    String? namaSatpam,
   }) {
     showModalBottomSheet(
       context: context,
@@ -53,6 +60,8 @@ class ReportDetailModal extends StatefulWidget {
         showClaimButton: showClaimButton,
         idLaporanCocok: idLaporanCocok,
         idPenerima: idPenerima,
+        klaimData: klaimData,
+        namaSatpam: namaSatpam,
       ),
     );
   }
@@ -66,7 +75,7 @@ class ReportDetailModal extends StatefulWidget {
   }
 }
 
-class _ReportDetailModalState extends State<ReportDetailModal> {
+class _ReportDetailModalState extends State<ReportDetailModal> with TickerProviderStateMixin {
   final KategoriService _kategoriService = KategoriService();
   final LokasiService _lokasiService = LokasiService();
   
@@ -74,11 +83,25 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
   String? lokasiName;
   bool isLoadingKategori = false;
   bool isLoadingLokasi = false;
+  TabController? _tabController;
 
   @override
   void initState() {
     super.initState();
     _loadKategoriAndLokasi();
+    
+    // Inisialisasi TabController hanya untuk laporan temuan yang selesai dengan klaim
+    if (widget.report.jenisLaporan.toLowerCase() == 'temuan' && 
+        widget.report.status.toLowerCase() == 'selesai' && 
+        widget.klaimData != null) {
+      _tabController = TabController(length: 2, vsync: this);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController?.dispose();
+    super.dispose();
   }
 
   Future<void> _loadKategoriAndLokasi() async {
@@ -132,22 +155,15 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd MMM yyyy', 'id_ID');
-    final timeFormat = DateFormat('HH:mm', 'id_ID');
     
-    Color statusColor;
     switch (widget.report.status.toLowerCase()) {
       case 'proses':
-        statusColor = Colors.orange;
         break;
       case 'cocok':
-        statusColor = Colors.green;
         break;
       case 'selesai':
-        statusColor = Colors.red;
         break;
       default:
-        statusColor = Colors.grey;
     }
 
     return Container(
@@ -200,13 +216,96 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
           
           // Content
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Foto barang jika ada (dipindah ke atas)
-                  if (widget.report.fotoPaths.isNotEmpty) ...[
+            child: _tabController != null 
+                ? Column(
+                    children: [
+                      // Tab Bar untuk laporan temuan dengan klaim
+                      Container(
+                        margin: const EdgeInsets.only(top: 16, left: 20, right: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TabBar(
+                          controller: _tabController,
+                          indicator: BoxDecoration(
+                            color: const Color(0xFF1F41BB),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          labelColor: Colors.white,
+                          unselectedLabelColor: Colors.grey.shade600,
+                          labelStyle: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          unselectedLabelStyle: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          tabs: const [
+                            Tab(text: 'Detail Laporan'),
+                            Tab(text: 'Informasi Klaim'),
+                          ],
+                        ),
+                      ),
+                      // Tab Bar View
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            // Tab 1: Detail Laporan
+                            SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: _buildReportDetailContent(),
+                            ),
+                            // Tab 2: Informasi Klaim
+                            SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: _buildClaimInfoContent(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: [
+                        _buildReportDetailContent(),
+                        _buildActionButtons(),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportDetailContent() {
+    final dateFormat = DateFormat('dd MMM yyyy', 'id_ID');
+    
+    Color statusColor;
+    switch (widget.report.status.toLowerCase()) {
+      case 'proses':
+        statusColor = Colors.orange;
+        break;
+      case 'cocok':
+        statusColor = Colors.green;
+        break;
+      case 'selesai':
+        statusColor = Colors.red;
+        break;
+      default:
+        statusColor = Colors.grey;
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Foto barang jika ada (dipindah ke atas)
+        if (widget.report.fotoPaths.isNotEmpty) ...[
                     Text(
                       'Foto Barang (${widget.report.fotoPaths.length}):',
                       style: GoogleFonts.poppins(
@@ -526,7 +625,7 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'Dibuat: ${dateFormat.format(widget.report.tanggalDibuat)} ${timeFormat.format(widget.report.tanggalDibuat)}',
+                      'Dibuat: ${DateFormat('dd MMM yyyy HH:mm', 'id_ID').format(widget.report.tanggalDibuat)}',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Colors.grey.shade600,
@@ -534,96 +633,228 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  
-                  const SizedBox(height: 20),
-                  
+                ],
+              );
+            }
 
-                  
-                  // Action button untuk menandai ditemukan (hanya untuk satpam)
-                  if (widget.showVerificationActions) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          widget.onApprove?.call(); // Menggunakan onApprove untuk menghapus laporan
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          'Tandai Ditemukan',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+  // Action button untuk menandai ditemukan (hanya untuk satpam)
+  Widget _buildActionButtons() {
+    return Column(
+      children: [
+        if (widget.showVerificationActions) ...[
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                widget.onApprove?.call(); // Menggunakan onApprove untuk menghapus laporan
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Tandai Ditemukan',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+        
+        // Tombol Klaim Barang (hanya untuk satpam, laporan temuan, dan status cocok)
+        if (widget.showClaimButton && 
+            widget.report.jenisLaporan == 'temuan' &&
+            widget.report.status.toLowerCase() == 'cocok' && 
+            widget.idLaporanCocok != null && 
+            widget.idPenerima != null) ...[
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => KlaimFormScreen(
+                      matchedReport: widget.report,
+                      idLaporanCocok: widget.idLaporanCocok!,
+                      idPenerima: widget.idPenerima!,
                     ),
-                    const SizedBox(height: 20),
-                  ],
-                  
-                  // Tombol Klaim Barang (hanya untuk satpam dan status cocok)
-                  if (widget.showClaimButton && 
-                      widget.report.status.toLowerCase() == 'cocok' && 
-                      widget.idLaporanCocok != null && 
-                      widget.idPenerima != null) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => KlaimFormScreen(
-                                matchedReport: widget.report,
-                                idLaporanCocok: widget.idLaporanCocok!,
-                                idPenerima: widget.idPenerima!,
-                              ),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1F41BB),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.assignment_turned_in,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Klaim Barang',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1F41BB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.assignment_turned_in,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Klaim Barang',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(height: 20),
-                  ],
+                  ),
                 ],
               ),
             ),
           ),
+          const SizedBox(height: 20),
         ],
-      ),
+      ],
+    );
+  }
+
+  Widget _buildClaimInfoContent() {
+    final dateFormat = DateFormat('dd MMM yyyy', 'id_ID');
+    final timeFormat = DateFormat('HH:mm', 'id_ID');
+    
+    if (widget.klaimData == null) {
+      return Center(
+        child: Text(
+          'Informasi klaim tidak tersedia',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.green.shade200,
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: Colors.green.shade700,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Informasi Klaim',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Nama Satpam
+              _buildDetailRow(
+                'Diklaim oleh:',
+                widget.namaSatpam ?? 'Satpam',
+                Icons.person,
+              ),
+              const SizedBox(height: 12),
+              
+              // Waktu Klaim
+              _buildDetailRow(
+                'Waktu Klaim:',
+                '${dateFormat.format(widget.klaimData!.waktuTerima)} ${timeFormat.format(widget.klaimData!.waktuTerima)}',
+                Icons.access_time,
+              ),
+              
+              // Bukti Foto Klaim
+              if (widget.klaimData!.urlFotoKlaim != null && widget.klaimData!.urlFotoKlaim!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Bukti Foto Klaim:',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () {
+                    FullscreenImageViewer.show(
+                      context: context,
+                      imagePath: widget.klaimData!.urlFotoKlaim!,
+                      currentIndex: 0,
+                      allImages: [widget.klaimData!.urlFotoKlaim!],
+                    );
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.green.shade300,
+                        width: 1,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Stack(
+                        children: [
+                          _buildImageWidget(widget.klaimData!.urlFotoKlaim!),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.zoom_in,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 

@@ -270,6 +270,18 @@ class _LoginScreenState extends State<LoginScreen> {
           final userData = await _authService.getUserData();
           final userRole = userData['role'] ?? '';
           
+          // Check if user is admin - admin cannot login to mobile app
+          if (userRole == 'admin') {
+            // Logout the admin user
+            await _authService.logout();
+            if (mounted) {
+              setState(() {
+                _loginError = 'Admin tidak dapat mengakses aplikasi mobile. Silakan gunakan web dashboard.';
+              });
+            }
+            return;
+          }
+          
           // Navigate to appropriate dashboard
           if (userRole == 'satpam') {
             Navigator.pushReplacement(

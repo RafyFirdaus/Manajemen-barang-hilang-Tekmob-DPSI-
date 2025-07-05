@@ -33,6 +33,7 @@ class ReportService {
       
       // Tambahkan field data laporan
       request.fields['id_kategori'] = report.kategoriId ?? 'kat-default';
+      // Kirim id_lokasi_klaim untuk semua jenis laporan
       if (report.lokasiId != null) {
         request.fields['id_lokasi_klaim'] = report.lokasiId!;
       }

@@ -58,6 +58,8 @@ class AuthService {
         await _secureStorage.write(key: 'user_email', value: user['email']);
         await _secureStorage.write(key: 'user_username', value: user['username']);
         await _secureStorage.write(key: 'user_role', value: user['role']);
+        await _secureStorage.write(key: 'user_phone', value: user['phone'] ?? '');
+        await _secureStorage.write(key: 'user_url_foto_identitas', value: user['url_foto_identitas'] ?? '');
         
         return {
           'success': true,
@@ -93,6 +95,7 @@ class AuthService {
     required String password,
     required String phone,
     required String address,
+    String? fotoIdentitasPath,
   }) async {
     try {
       // Validasi input
@@ -117,22 +120,27 @@ class AuthService {
         };
       }
 
-      // Kirim request ke API backend
-      final response = await http.post(
-        Uri.parse('$baseUrl/register'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'name': name,
-          'username': username,
-          'email': email,
-          'password': password,
-          'phone': phone,
-          'address': address,
-        }),
-      );
-
+      // Buat multipart request untuk upload foto
+      var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/register'));
+      
+      // Tambahkan field data
+      request.fields['username'] = username;
+      request.fields['email'] = email;
+      request.fields['password'] = password;
+      
+      // Tambahkan foto identitas jika ada
+      if (fotoIdentitasPath != null && fotoIdentitasPath.isNotEmpty) {
+        var file = await http.MultipartFile.fromPath(
+          'foto_identitas',
+          fotoIdentitasPath,
+        );
+        request.files.add(file);
+      }
+      
+      // Kirim request
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 201) {
@@ -145,6 +153,7 @@ class AuthService {
             'username': data['user']['username'],
             'email': data['user']['email'],
             'role': data['user']['role'],
+            'url_foto_identitas': data['user']['url_foto_identitas'] ?? '',
           },
         };
       } else {
@@ -180,13 +189,76 @@ class AuthService {
       'email': await _secureStorage.read(key: 'user_email'),
       'username': await _secureStorage.read(key: 'user_username'),
       'role': await _secureStorage.read(key: 'user_role'),
+      'phone': await _secureStorage.read(key: 'user_phone'),
+      'url_foto_identitas': await _secureStorage.read(key: 'user_url_foto_identitas'),
     };
+  }
+
+  // Method untuk mendapatkan data user lengkap
+  Future<Map<String, String?>> getFullUserData() async {
+    try {
+      // Coba ambil dari secure storage dulu
+      final localData = await getUserData();
+      
+      // Jika phone atau url_foto_identitas tidak ada di local storage, coba ambil dari API
+      if ((localData['phone'] == null || localData['phone']!.isEmpty) ||
+          (localData['url_foto_identitas'] == null || localData['url_foto_identitas']!.isEmpty)) {
+        final userId = localData['id'];
+        if (userId != null && userId.isNotEmpty) {
+          final apiData = await getUserById(userId);
+          if (apiData != null) {
+            if (apiData['phone'] != null) {
+              await _secureStorage.write(key: 'user_phone', value: apiData['phone']);
+              localData['phone'] = apiData['phone'];
+            }
+            if (apiData['url_foto_identitas'] != null) {
+              await _secureStorage.write(key: 'user_url_foto_identitas', value: apiData['url_foto_identitas']);
+              localData['url_foto_identitas'] = apiData['url_foto_identitas'];
+            }
+          }
+        }
+      }
+      
+      return localData;
+    } catch (e) {
+      print('Error getting full user data: $e');
+      return await getUserData();
+    }
+  }
+
+  // Method untuk mendapatkan nomor telepon
+  Future<String?> getPhoneNumber() async {
+    return await _secureStorage.read(key: 'user_phone');
   }
 
   // Method untuk cek apakah user sudah login
   Future<bool> isLoggedIn() async {
     final token = await getToken();
     return token != null && token.isNotEmpty;
+  }
+
+  // Method untuk mendapatkan data user berdasarkan ID
+  Future<Map<String, dynamic>?> getUserById(String userId) async {
+    try {
+      final response = await authenticatedRequest('/users/$userId');
+      
+      if (response.statusCode == 200) {
+        final userData = jsonDecode(response.body);
+        return {
+          'id': userData['id'],
+          'username': userData['username'],
+          'email': userData['email'],
+          'role': userData['role'],
+          'url_foto_identitas': userData['url_foto_identitas'] ?? '',
+        };
+      } else {
+        print('Error getting user by ID: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Error getting user by ID: $e');
+      return null;
+    }
   }
 
   // Method untuk request dengan autentikasi
