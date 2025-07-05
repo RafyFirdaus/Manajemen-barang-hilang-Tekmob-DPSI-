@@ -58,8 +58,32 @@ class AuthService {
         await _secureStorage.write(key: 'user_email', value: user['email']);
         await _secureStorage.write(key: 'user_username', value: user['username']);
         await _secureStorage.write(key: 'user_role', value: user['role']);
-        await _secureStorage.write(key: 'user_phone', value: user['phone'] ?? '');
-        await _secureStorage.write(key: 'user_url_foto_identitas', value: user['url_foto_identitas'] ?? '');
+        
+        // Ambil data lengkap dari endpoint profile untuk mendapatkan phone dan foto
+        try {
+          final profileResponse = await http.get(
+            Uri.parse('$baseUrl/users/profile'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          );
+          
+          if (profileResponse.statusCode == 200) {
+            final profileData = jsonDecode(profileResponse.body);
+            await _secureStorage.write(key: 'user_phone', value: profileData['no_hp'] ?? '');
+            await _secureStorage.write(key: 'user_url_foto_identitas', value: profileData['url_foto_identitas'] ?? '');
+          } else {
+            // Fallback jika gagal ambil profile
+            await _secureStorage.write(key: 'user_phone', value: '');
+            await _secureStorage.write(key: 'user_url_foto_identitas', value: '');
+          }
+        } catch (e) {
+          print('Error fetching profile data: $e');
+          // Fallback jika gagal ambil profile
+          await _secureStorage.write(key: 'user_phone', value: '');
+          await _secureStorage.write(key: 'user_url_foto_identitas', value: '');
+        }
         
         return {
           'success': true,
@@ -126,6 +150,9 @@ class AuthService {
       // Tambahkan field data
       request.fields['username'] = username;
       request.fields['email'] = email;
+      if (phone.isNotEmpty) {
+        request.fields['no_hp'] = phone;
+      }
       request.fields['password'] = password;
       
       // Tambahkan foto identitas jika ada
@@ -258,6 +285,91 @@ class AuthService {
     } catch (e) {
       print('Error getting user by ID: $e');
       return null;
+    }
+  }
+
+  // Method untuk update profile
+  Future<Map<String, dynamic>> updateProfile({
+    required String username,
+    String? phone,
+    String? profileImagePath,
+  }) async {
+    try {
+      final userId = await _secureStorage.read(key: 'user_id');
+      final token = await getToken();
+      
+      if (userId == null || token == null) {
+        return {
+          'success': false,
+          'message': 'User tidak terautentikasi',
+        };
+      }
+
+      // Validasi input
+      if (username.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Username tidak boleh kosong',
+        };
+      }
+
+      // Buat multipart request untuk upload foto profile
+      var request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/users/profile'));
+      
+      // Tambahkan header authorization
+      request.headers['Authorization'] = 'Bearer $token';
+      
+      // Tambahkan field data
+      request.fields['username'] = username;
+      if (phone != null && phone.isNotEmpty) {
+        request.fields['no_hp'] = phone;
+      }
+      
+      // Tambahkan foto profile jika ada
+      if (profileImagePath != null && profileImagePath.isNotEmpty) {
+        var file = await http.MultipartFile.fromPath(
+          'foto_identitas', // Backend menggunakan field ini untuk foto profile
+          profileImagePath,
+        );
+        request.files.add(file);
+      }
+      
+      // Kirim request
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        // Update berhasil, simpan data baru ke secure storage
+        await _secureStorage.write(key: 'user_username', value: username);
+        if (phone != null && phone.isNotEmpty) {
+          await _secureStorage.write(key: 'user_phone', value: phone);
+        }
+        
+        // Update foto profile jika ada
+        if (data['user'] != null && data['user']['url_foto_identitas'] != null) {
+          await _secureStorage.write(key: 'user_url_foto_identitas', value: data['user']['url_foto_identitas']);
+        }
+        
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Profile berhasil diperbarui',
+          'user': data['user'],
+        };
+      } else {
+        // Update gagal
+        return {
+          'success': false,
+          'message': data['error'] ?? 'Gagal memperbarui profile',
+        };
+      }
+    } catch (e) {
+      // Error handling
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
     }
   }
 
