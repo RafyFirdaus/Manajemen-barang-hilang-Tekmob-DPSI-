@@ -90,10 +90,9 @@ class _ReportDetailModalState extends State<ReportDetailModal> with TickerProvid
     super.initState();
     _loadKategoriAndLokasi();
     
-    // Inisialisasi TabController hanya untuk laporan temuan yang selesai dengan klaim
+    // Inisialisasi TabController hanya untuk laporan temuan dengan status selesai
     if (widget.report.jenisLaporan.toLowerCase() == 'temuan' && 
-        widget.report.status.toLowerCase() == 'selesai' && 
-        widget.klaimData != null) {
+        widget.report.status.toLowerCase() == 'selesai') {
       _tabController = TabController(length: 2, vsync: this);
     }
   }
@@ -243,7 +242,7 @@ class _ReportDetailModalState extends State<ReportDetailModal> with TickerProvid
                             fontWeight: FontWeight.w500,
                           ),
                           tabs: const [
-                            Tab(text: 'Detail Laporan'),
+                            Tab(text: 'Informasi Barang'),
                             Tab(text: 'Informasi Klaim'),
                           ],
                         ),
@@ -253,7 +252,7 @@ class _ReportDetailModalState extends State<ReportDetailModal> with TickerProvid
                         child: TabBarView(
                           controller: _tabController,
                           children: [
-                            // Tab 1: Detail Laporan
+                            // Tab 1: Informasi Barang
                             SingleChildScrollView(
                               padding: const EdgeInsets.symmetric(horizontal: 20),
                               child: _buildReportDetailContent(),
@@ -729,13 +728,49 @@ class _ReportDetailModalState extends State<ReportDetailModal> with TickerProvid
     final timeFormat = DateFormat('HH:mm', 'id_ID');
     
     if (widget.klaimData == null) {
-      return Center(
-        child: Text(
-          'Informasi klaim tidak tersedia',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            color: Colors.grey.shade600,
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        margin: const EdgeInsets.only(top: 20),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.blue.shade200,
+            width: 1,
           ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 48,
+              color: Colors.blue.shade600,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Belum Ada Klaim',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.blue.shade700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.report.status.toLowerCase() == 'proses'
+                  ? 'Barang ini masih dalam proses verifikasi. Informasi klaim akan muncul setelah ada yang mengklaim barang ini.'
+                  : widget.report.status.toLowerCase() == 'cocok'
+                      ? 'Barang ini sudah dicocokkan dengan laporan kehilangan. Menunggu proses klaim dari pemilik.'
+                      : 'Informasi klaim tidak tersedia untuk laporan ini.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.blue.shade600,
+                height: 1.5,
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -814,8 +849,8 @@ class _ReportDetailModalState extends State<ReportDetailModal> with TickerProvid
                     );
                   },
                   child: Container(
-                    width: double.infinity,
-                    height: 200,
+                    width: 200,
+                    height: 150,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(

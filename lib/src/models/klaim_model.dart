@@ -42,18 +42,39 @@ class Klaim {
   }
 
   factory Klaim.fromJson(Map<String, dynamic> json) {
+    // Helper function to safely convert to string
+    String? safeString(dynamic value) {
+      if (value == null) return null;
+      if (value is String) return value;
+      return value.toString();
+    }
+    
+    // Helper function to safely parse datetime
+    DateTime? safeDateTime(dynamic value) {
+      if (value == null) return null;
+      if (value is String) {
+        try {
+          return DateTime.parse(value);
+        } catch (e) {
+          print('Error parsing datetime: $value, error: $e');
+          return null;
+        }
+      }
+      return null;
+    }
+    
     return Klaim(
-      idKlaim: json['id_klaim'],
-      idLaporanCocok: json['id_laporan_cocok'],
-      idSatpam: json['id_satpam'],
-      idPenerima: json['id_penerima'],
-      urlFotoKlaim: json['url_foto_klaim'],
-      waktuTerima: DateTime.parse(json['waktu_terima']),
-      status: json['status'],
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
-      createdBy: json['created_by'],
-      updatedBy: json['updated_by'],
+      idKlaim: safeString(json['id_klaim']) ?? '',
+      idLaporanCocok: safeString(json['id_laporan_cocok']) ?? '',
+      idSatpam: safeString(json['id_satpam']) ?? '',
+      idPenerima: safeString(json['id_penerima']) ?? '',
+      urlFotoKlaim: safeString(json['url_foto_klaim']),
+      waktuTerima: safeDateTime(json['waktu_terima']) ?? DateTime.now(),
+      status: safeString(json['status']) ?? '',
+      createdAt: safeDateTime(json['created_at']),
+      updatedAt: safeDateTime(json['updated_at']),
+      createdBy: safeString(json['created_by']),
+      updatedBy: safeString(json['updated_by']),
     );
   }
 }

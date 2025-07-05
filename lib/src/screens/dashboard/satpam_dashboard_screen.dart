@@ -448,12 +448,14 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
   }
 
   void _showReportDetail(Report report) async {
-    // Cek apakah laporan memiliki status 'cocok' dan ambil data cocok
+    // Cek apakah laporan memiliki status 'cocok' atau 'selesai' dan ambil data cocok
     Map<String, dynamic>? cocokData;
     String? idLaporanCocok;
     String? idPenerima;
+    Klaim? klaimData;
+    String? namaSatpam;
     
-    if (report.status.toLowerCase() == 'cocok') {
+    if (report.status.toLowerCase() == 'cocok' || report.status.toLowerCase() == 'selesai') {
       try {
         cocokData = await _reportService.getCocokByReportId(report.id);
         if (cocokData != null) {
@@ -467,6 +469,66 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
             if (idLaporanHilang != null) {
               final laporanHilang = await _reportService.getReportById(idLaporanHilang);
               idPenerima = laporanHilang?.userId.toString();
+            }
+          }
+          
+          // Jika status selesai, ambil data klaim
+          if (report.status.toLowerCase() == 'selesai' && idLaporanCocok != null) {
+            try {
+              final klaimResponse = await _klaimService.getAllKlaim();
+              print('Klaim response: $klaimResponse');
+              
+              if (klaimResponse['success'] == true) {
+                final dynamic klaimData_raw = klaimResponse['data'];
+                print('Raw klaim data: $klaimData_raw');
+                print('Klaim data type: ${klaimData_raw.runtimeType}');
+                
+                List<dynamic> klaimList = [];
+                
+                // Handle different response structures
+                if (klaimData_raw is List) {
+                  klaimList = klaimData_raw;
+                } else if (klaimData_raw is Map && klaimData_raw.containsKey('data')) {
+                  klaimList = klaimData_raw['data'] ?? [];
+                } else if (klaimData_raw is Map) {
+                  // If it's a single object, wrap it in a list
+                  klaimList = [klaimData_raw];
+                }
+                
+                print('Processed klaim list: $klaimList');
+                
+                final klaimJson = klaimList.firstWhere(
+                  (k) {
+                    print('Checking klaim item: $k');
+                    print('Comparing ${k['id_laporan_cocok']} with $idLaporanCocok');
+                    return k['id_laporan_cocok'] == idLaporanCocok;
+                  },
+                  orElse: () => null,
+                );
+                
+                print('Found klaim JSON: $klaimJson');
+                
+                if (klaimJson != null) {
+                  try {
+                    klaimData = Klaim.fromJson(klaimJson);
+                    print('Successfully parsed klaim data: ${klaimData.idKlaim}');
+                    
+                    // Ambil nama satpam
+                    try {
+                      final satpamData = await _authService.getUserById(klaimData.idSatpam);
+                      namaSatpam = satpamData?['username'] ?? 'Satpam';
+                    } catch (e) {
+                      print('Error getting satpam data: $e');
+                      namaSatpam = 'Satpam';
+                    }
+                  } catch (parseError) {
+                    print('Error parsing klaim JSON: $parseError');
+                    print('Klaim JSON structure: $klaimJson');
+                  }
+                }
+              }
+            } catch (e) {
+              print('Error getting klaim data: $e');
             }
           }
         }
@@ -486,6 +548,8 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
       showClaimButton: true,
       idLaporanCocok: idLaporanCocok,
       idPenerima: idPenerima,
+      klaimData: klaimData,
+      namaSatpam: namaSatpam,
     );
   }
 
@@ -502,22 +566,54 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
         if (idLaporanCocok != null) {
           // Ambil semua klaim dan cari yang sesuai dengan id_laporan_cocok
           final klaimResponse = await _klaimService.getAllKlaim();
+          print('Completed report klaim response: $klaimResponse');
+          
           if (klaimResponse['success'] == true) {
-            final List<dynamic> klaimList = klaimResponse['data'] ?? [];
+            final dynamic klaimData_raw = klaimResponse['data'];
+            print('Completed report raw klaim data: $klaimData_raw');
+            print('Completed report klaim data type: ${klaimData_raw.runtimeType}');
+            
+            List<dynamic> klaimList = [];
+            
+            // Handle different response structures
+            if (klaimData_raw is List) {
+              klaimList = klaimData_raw;
+            } else if (klaimData_raw is Map && klaimData_raw.containsKey('data')) {
+              klaimList = klaimData_raw['data'] ?? [];
+            } else if (klaimData_raw is Map) {
+              // If it's a single object, wrap it in a list
+              klaimList = [klaimData_raw];
+            }
+            
+            print('Completed report processed klaim list: $klaimList');
+            
             final klaimJson = klaimList.firstWhere(
-              (k) => k['id_laporan_cocok'] == idLaporanCocok,
+              (k) {
+                print('Completed report checking klaim item: $k');
+                print('Completed report comparing ${k['id_laporan_cocok']} with $idLaporanCocok');
+                return k['id_laporan_cocok'] == idLaporanCocok;
+              },
               orElse: () => null,
             );
             
+            print('Completed report found klaim JSON: $klaimJson');
+            
             if (klaimJson != null) {
-              klaimData = Klaim.fromJson(klaimJson);
-              
-              // Ambil nama satpam
               try {
-                final satpamData = await _authService.getUserById(klaimData.idSatpam);
-                namaSatpam = satpamData?['username'] ?? 'Satpam';
-              } catch (e) {
-                namaSatpam = 'Satpam';
+                klaimData = Klaim.fromJson(klaimJson);
+                print('Completed report successfully parsed klaim data: ${klaimData.idKlaim}');
+                
+                // Ambil nama satpam
+                try {
+                  final satpamData = await _authService.getUserById(klaimData.idSatpam);
+                  namaSatpam = satpamData?['username'] ?? 'Satpam';
+                } catch (e) {
+                  print('Completed report error getting satpam data: $e');
+                  namaSatpam = 'Satpam';
+                }
+              } catch (parseError) {
+                print('Completed report error parsing klaim JSON: $parseError');
+                print('Completed report klaim JSON structure: $klaimJson');
               }
             }
           }
