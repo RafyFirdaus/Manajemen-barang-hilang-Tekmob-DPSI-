@@ -37,11 +37,14 @@ class ReportListView extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: reports.length,
       itemBuilder: (context, index) {
-        return GestureDetector(
-          onTap: () => onReportTap(reports[index]),
-          child: ReportDetailCard(
-            report: reports[index],
-            showMatchButton: false,
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: GestureDetector(
+            onTap: () => onReportTap(reports[index]),
+            child: ReportDetailCard(
+              report: reports[index],
+              showMatchButton: false,
+            ),
           ),
         );
       },

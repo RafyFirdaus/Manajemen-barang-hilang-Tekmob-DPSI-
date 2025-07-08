@@ -208,7 +208,7 @@ class _ReportDetailCardState extends State<ReportDetailCard> {
             Text(
               widget.report.deskripsi,
               style: GoogleFonts.poppins(
-                fontSize: 14,
+                fontSize: 12,
                 color: Colors.grey.shade600,
                 height: 1.4,
               ),
@@ -340,8 +340,8 @@ class _ReportDetailCardState extends State<ReportDetailCard> {
                   );
                 },
                 child: Container(
-                  height: 120,
-                  width: 120,
+                  height: 80,
+                  width: 80,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     color: Colors.grey.shade100,

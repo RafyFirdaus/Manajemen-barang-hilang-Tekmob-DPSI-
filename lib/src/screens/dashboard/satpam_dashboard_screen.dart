@@ -219,7 +219,7 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
         ),
         // Tab Bar untuk Riwayat Selesai
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20),
+          margin: const EdgeInsets.symmetric(horizontal: 1),
           decoration: BoxDecoration(
             color: Colors.grey.shade100,
             borderRadius: BorderRadius.circular(12),
@@ -232,20 +232,27 @@ class _SatpamDashboardScreenState extends State<SatpamDashboardScreen>
               color: const Color(0xFF1F41BB),
               borderRadius: BorderRadius.circular(12),
             ),
+            indicatorPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             labelStyle: GoogleFonts.poppins(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
             unselectedLabelStyle: GoogleFonts.poppins(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
             tabs: [
               Tab(
-                text: 'Barang Hilang (${_laporanSelesaiHilang.length})',
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Text('Barang Hilang (${_laporanSelesaiHilang.length})'),
+                ),
               ),
               Tab(
-                text: 'Barang Temuan (${_laporanSelesaiTemuan.length})',
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Text('Barang Temuan (${_laporanSelesaiTemuan.length})'),
+                ),
               ),
             ],
           ),
