@@ -1,10 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../models/report_model.dart';
 
 class MatchingService {
   static const String baseUrl = 'https://api-manajemen-barang-hilang.vercel.app/api/cocok';
-  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();  
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  
+  // Hugging Face API Configuration
+  static const String _hfApiUrl = 'https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2';
+  static const String _hfToken = 'YOUR_HUGGING_FACE_TOKEN_HERE'; // TODO: Ganti dengan token HF yang sebenarnya atau gunakan environment variable
+  static const double _similarityThreshold = 0.75;
+  
   // Fungsi untuk memverifikasi token
   Future<Map<String, dynamic>> _verifyToken() async {
     try {
@@ -247,6 +254,68 @@ class MatchingService {
     } catch (e) {
       print('Error deleting matching: $e');
       return false;
+    }
+  }
+
+  // Metode untuk menghitung similarity menggunakan Hugging Face API
+  Future<List<double>> _calculateSimilarity(String sourceText, List<String> candidateTexts) async {
+    try {
+      final response = await http.post(
+        Uri.parse(_hfApiUrl),
+        headers: {
+          'Authorization': 'Bearer $_hfToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'inputs': {
+            'source_sentence': sourceText,
+            'sentences': candidateTexts,
+          }
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> scores = jsonDecode(response.body);
+        return scores.cast<double>();
+      } else {
+        print('Error calculating similarity: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        return List.filled(candidateTexts.length, 0.0);
+      }
+    } catch (e) {
+      print('Error in similarity calculation: $e');
+      return List.filled(candidateTexts.length, 0.0);
+    }
+  }
+
+  // Metode untuk menggabungkan teks laporan untuk analisis
+  String _combineReportText(Report report) {
+    return '${report.namaBarang} ${report.deskripsi} ${report.lokasi}';
+  }
+
+
+
+  // Metode untuk konfirmasi dan menyimpan hasil pencocokan
+  Future<Map<String, dynamic>> confirmAutomaticMatch(Report laporanHilang, Report laporanTemuan, double similarityScore) async {
+    try {
+      // Buat pencocokan menggunakan metode yang sudah ada
+      final result = await createMatching(
+        laporanHilang.id,
+        laporanTemuan.id,
+        skorCocok: similarityScore,
+      );
+      
+      if (result['success'] == true) {
+        print('Automatic match confirmed and saved: ${laporanHilang.namaBarang} <-> ${laporanTemuan.namaBarang}');
+      }
+      
+      return result;
+    } catch (e) {
+      print('Error confirming automatic match: $e');
+      return {
+        'success': false,
+        'error': 'Gagal mengkonfirmasi pencocokan: $e'
+      };
     }
   }
 }

@@ -6,14 +6,12 @@ import 'package:http_parser/http_parser.dart';
 import '../models/report_model.dart';
 import '../models/notification_model.dart';
 import 'notification_service.dart';
-import 'matching_service.dart';
 
 
 class ReportService {
   static const String baseUrl = 'https://api-manajemen-barang-hilang.vercel.app/api/laporan';
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
   final NotificationService _notificationService = NotificationService();
-  final MatchingService _matchingService = MatchingService();
   // Klaim service removed
 
   // Fungsi uploadPhotos dihapus karena foto sekarang diupload langsung dalam saveReport
@@ -251,63 +249,7 @@ class ReportService {
     }
   }
 
-  // Match dua laporan menggunakan API
-  Future<Map<String, dynamic>> matchReports(String laporanHilangId, String laporanTemuanId, {double skorCocok = 0}) async {
-    try {
-      // Gunakan MatchingService untuk membuat pencocokan
-      final result = await _matchingService.createMatching(
-        laporanHilangId, 
-        laporanTemuanId, 
-        skorCocok: skorCocok
-      );
-      
-      if (result['success'] == true) {
-        // Ambil data laporan untuk notifikasi
-        final report1 = await getReportById(laporanHilangId);
-        final report2 = await getReportById(laporanTemuanId);
-        
-        if (report1 != null && report2 != null) {
-          // Buat notifikasi untuk kedua user
-          final notification1 = NotificationModel(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            title: 'Laporan Dicocokkan',
-            message: 'Laporan ${report1.namaBarang} telah dicocokkan dengan laporan lain!',
-            reportId: report1.id,
-            reportName: report1.namaBarang,
-            oldStatus: 'proses',
-            newStatus: 'cocok',
-            createdAt: DateTime.now(),
-            isRead: false,
-            userId: report1.userId,
-          );
-          
-          final notification2 = NotificationModel(
-            id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
-            title: 'Laporan Dicocokkan',
-            message: 'Laporan ${report2.namaBarang} telah dicocokkan dengan laporan lain!',
-            reportId: report2.id,
-            reportName: report2.namaBarang,
-            oldStatus: 'proses',
-            newStatus: 'cocok',
-            createdAt: DateTime.now(),
-            isRead: false,
-            userId: report2.userId,
-          );
-          
-          await _notificationService.addNotification(notification1);
-          await _notificationService.addNotification(notification2);
-        }
-      }
-      
-      return result;
-    } catch (e) {
-      print('Error matching reports: $e');
-      return {
-        'success': false,
-        'error': 'Terjadi kesalahan saat mencocokkan laporan: $e'
-      };
-    }
-  }
+
   
   // Klaim functionality removed
 

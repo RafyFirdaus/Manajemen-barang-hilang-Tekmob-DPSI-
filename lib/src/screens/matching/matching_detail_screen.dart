@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/report_model.dart';
 import '../../services/report_service.dart';
+import '../../services/matching_service.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/report_detail_card.dart';
 
 class MatchingDetailScreen extends StatefulWidget {
@@ -20,7 +22,8 @@ class MatchingDetailScreen extends StatefulWidget {
 
 class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
   final ReportService _reportService = ReportService();
-
+  final MatchingService _matchingService = MatchingService();
+  final NotificationService _notificationService = NotificationService();
   List<Report> _matchingCandidates = [];
 
   @override
@@ -150,7 +153,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
       }
       
       // Match kedua laporan menggunakan API
-      final result = await _reportService.matchReports(
+      final result = await _matchingService.createMatching(
         laporanHilangId, 
         laporanTemuanId, 
         skorCocok: 85.0 // Default score
@@ -160,6 +163,42 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
       Navigator.of(context).pop();
       
       if (result['success'] == true) {
+        // Kirim notifikasi kepada user yang membuat laporan kehilangan
+        try {
+          Report laporanHilang;
+          Report laporanTemuan;
+          
+          if (widget.selectedReport.jenisLaporan == 'hilang') {
+            laporanHilang = widget.selectedReport;
+            laporanTemuan = matchingReport;
+          } else {
+            laporanHilang = matchingReport;
+            laporanTemuan = widget.selectedReport;
+          }
+          
+          // Kirim notifikasi kepada user yang membuat laporan kehilangan
+          await _notificationService.createStatusChangeNotification(
+            userId: laporanHilang.userId,
+            reportId: laporanHilang.id,
+            reportName: laporanHilang.namaBarang,
+            oldStatus: laporanHilang.status,
+            newStatus: 'cocok',
+          );
+          
+          // Kirim notifikasi kepada user yang membuat laporan temuan
+          await _notificationService.createStatusChangeNotification(
+            userId: laporanTemuan.userId,
+            reportId: laporanTemuan.id,
+            reportName: laporanTemuan.namaBarang,
+            oldStatus: laporanTemuan.status,
+            newStatus: 'cocok',
+          );
+          
+          print('Notifikasi berhasil dikirim kepada kedua user');
+        } catch (e) {
+          print('Error mengirim notifikasi: $e');
+        }
+        
         // Tampilkan pesan sukses
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
