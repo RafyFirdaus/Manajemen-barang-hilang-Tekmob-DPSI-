@@ -9,7 +9,7 @@ class MatchingService {
   
   // Hugging Face API Configuration
   static const String _hfApiUrl = 'https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2';
-  static const String _hfToken = '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'; // TODO: Ganti dengan token HF yang sebenarnya atau gunakan environment variable
+  static const String _hfToken = ''; // TODO: Ganti dengan token HF yang sebenarnya atau gunakan environment variable
   static const double _similarityThreshold = 0.75;
   
   // Fungsi untuk memverifikasi token
