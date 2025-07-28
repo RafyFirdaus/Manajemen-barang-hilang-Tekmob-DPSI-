@@ -1,5 +1,5 @@
-import java.util.Properties
-import java.io.FileInputStream
+// import java.util.Properties
+// import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
@@ -43,7 +43,7 @@ android {
         minSdk = 21  // Required for image_picker
         targetSdk = flutter.targetSdkVersion
         versionCode = 4
-        versionName = "1.0.3"
+        versionName = "1.0.5"
     }
 
     buildTypes {
